@@ -1,0 +1,151 @@
+[
+    {
+        "id": 1,
+        "name": "and",
+        "listoftasks": [
+            {
+                "id": 10,
+                "title": "morning",
+                "owner_id": 1,
+                "tasks": [
+                    {
+                        "id": 100,
+                        "value": "почистить зубы",
+                        "completed": false
+                    },
+                    {
+                        "id": 200,
+                        "value": "сделать зарядку",
+                        "completed": false
+                    },
+                    {
+                        "id": 300,
+                        "value": "позавтракать",
+                        "completed": false
+                    },
+                    {
+                        "id": 99,
+                        "value": "big task",
+                        "completed": false
+                    }
+                ]
+            },
+            {
+                "id": 20,
+                "title": "day",
+                "owner_id": 1,
+                "tasks": [
+                    {
+                        "id": 100,
+                        "value": "поработать",
+                        "completed": false
+                    },
+                    {
+                        "id": 200,
+                        "value": "пообедать",
+                        "completed": false
+                    },
+                    {
+                        "id": 300,
+                        "value": "еще поработать",
+                        "completed": false
+                    }
+                ]
+            },
+            {
+                "id": 30,
+                "title": "evening",
+                "owner_id": 1,
+                "tasks": [
+                    {
+                        "id": 100,
+                        "value": "погулять с собакой",
+                        "completed": false
+                    },
+                    {
+                        "id": 200,
+                        "value": "поужинать",
+                        "completed": false
+                    },
+                    {
+                        "id": 300,
+                        "value": "отдохнуть (почитать, посмотреть кино)",
+                        "completed": false
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "name": "oleg",
+        "listoftasks": [
+            {
+                "id": 10,
+                "title": "morning",
+                "owner_id": 2,
+                "tasks": [
+                    {
+                        "id": 100,
+                        "value": "почистить зубы",
+                        "completed": false
+                    },
+                    {
+                        "id": 200,
+                        "value": "сделать зарядку",
+                        "completed": false
+                    },
+                    {
+                        "id": 300,
+                        "value": "позавтракать",
+                        "completed": false
+                    }
+                ]
+            },
+            {
+                "id": 20,
+                "title": "day",
+                "owner_id": 2,
+                "tasks": [
+                    {
+                        "id": 100,
+                        "value": "поработать",
+                        "completed": false
+                    },
+                    {
+                        "id": 200,
+                        "value": "пообедать",
+                        "completed": false
+                    },
+                    {
+                        "id": 300,
+                        "value": "еще поработать",
+                        "completed": false
+                    }
+                ]
+            },
+            {
+                "id": 30,
+                "title": "evening",
+                "owner_id": 2,
+                "tasks": [
+                    {
+                        "id": 100,
+                        "value": "прогулка",
+                        "completed": false
+                    },
+                    {
+                        "id": 200,
+                        "value": "поужинать",
+                        "completed": false
+                    },
+                    {
+                        "id": 300,
+                        "value": "отдохнуть (почитать, посмотреть кино)",
+                        "completed": false
+                    }
+                ]
+            }
+        ]
+    }
+]
