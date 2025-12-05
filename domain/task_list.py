@@ -32,6 +32,10 @@ class ListOfTasks:
                 return task
         return None
 
+    def get_all_tasks(self) -> list[Task] | None:
+        return self.tasks
+
+
     def max_id(self):
         max_id = 0
         for task in self.tasks:

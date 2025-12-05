@@ -18,6 +18,12 @@ class UserService:
 
         return User(id=user.id, name=user.name, username=user.username)
 
+    def get_user_by_id(self, user_id: int) -> User:
+        user = self.repo.get_by_id(user_id)
+        if not user:
+            raise ValueError("Пользователь не найден")
+        return user
+
 
     def add_list_of_tasks(self, user_id: int, title) -> ListOfTasks:
         user = self.repo.get_by_id(user_id)
@@ -32,10 +38,11 @@ class UserService:
 
         return list_of_tasks
 
-    def add_task(self, user_id: int, list_id, value) -> Task:
+    def add_task(self, user_id: int, list_id: int, value) -> Task:
         user = self.repo.get_by_id(user_id)
         target_list = None
         for list_of_tasks in user.listoftasks:
+            print(list_of_tasks)
             if list_of_tasks.id == list_id:
                 target_list = list_of_tasks
                 break
@@ -50,5 +57,12 @@ class UserService:
 
         return task
 
+
+    def show_list_of_tasks(self, user_id: int) -> list:
+        user_lists = []
+        user = self.repo.get_by_id(user_id)
+        for listoftasks in user.listoftasks:
+            user_lists.append((listoftasks.id, listoftasks.title))
+        return user_lists
 
 

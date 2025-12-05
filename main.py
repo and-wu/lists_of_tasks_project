@@ -5,7 +5,7 @@ from infra.factory import create_repository, DBType
 from presentation.cli.cli import CLI
 
 repo = create_repository(
-    db_type=DBType.SQLITE,  # DBType.JSON или DBType.SQLITE
+    db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
     path=Path("storage/users"))
 
 service = UserService(repo=repo)
