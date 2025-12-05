@@ -1,0 +1,16 @@
+from typing import Protocol, Optional, runtime_checkable
+
+from domain.tasks import Task
+
+
+# =============================================
+# Чистый интерфейс репозитория для задачи
+# =============================================
+
+@runtime_checkable
+class ITaskRepository(Protocol):
+    def get_by_id(self, task_id: int) -> Optional[Task]: ...
+    #def get_by_username(self, username: str) -> Optional[Task]: ...
+    def save(self, task: Task) -> Task: ...
+    def all(self) -> list[Task]: ...
+    def delete(self, task_id: int) -> None: ...

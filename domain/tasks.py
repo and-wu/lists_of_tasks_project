@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+# =============================================
+# Модель
+# =============================================
 
 @dataclass
 class Task:
