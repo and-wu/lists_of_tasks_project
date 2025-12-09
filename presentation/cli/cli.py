@@ -162,8 +162,6 @@ class CLI:
                 print("❌ Неверный ввод, попробуйте снова")
 
     def show_lists_of_tasks(self):
-        # Просмотр списков пользователя
-        # user = self.user_service.get_user_by_id(user_id=self._current_user_id)
 
         for list_tasks in self.user.listoftasks:
             print(f"{list_tasks.id} - {list_tasks.title}")
