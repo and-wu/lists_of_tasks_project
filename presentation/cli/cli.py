@@ -9,6 +9,7 @@ class CLI:
         self.user_service = user_service
         self._current_user_id: int | None = None
         self.user = None
+        self._running = True
 
         # Меню будет меняться в зависимости от того, авторизован пользователь или нет
         self.auth_actions: dict[str, tuple[str, Callable]] = {
@@ -18,17 +19,17 @@ class CLI:
         }
 
         self.main_actions: dict[str, tuple[str, Callable]] = {
-            "1": ("Создать список задач", self.create_task_list),
+            "1": ("Создать список задач", self.create_lists_of_tasks),
             "2": ("Создать задачу", self.create_task),
             "3": ("Показать мои списки задач", self.show_lists_of_tasks),
-            "4": ("Посмотреть задачи в списке", self.choice_lists_of_tasks),
+            "4": ("Посмотреть задачи в списке", self.show_tasks),
             "5": ("Выйти из аккаунта", self.logout),
             "q": ("Выйти из программы", self.quit),
         }
 
 
     def run(self):
-        while True:
+        while self._running:
             # Выбираем правильное меню
             if self._current_user_id is None:
                 menu = self.auth_actions
@@ -100,51 +101,106 @@ class CLI:
         print(f"Вы - {user}\nВаш user_id = {self._current_user_id}")
 
     def quit(self):
-        print("quit there")
+        print("Выход из программы. До свидания!")
+        self._running = False
 
-    def create_task_list(self):
+    def create_lists_of_tasks(self):
         print("Создания списка")
         title = input('Введите название для списка задач - ')
-        lisrt_of_tasks = self.user_service.add_list_of_tasks(user_id=self._current_user_id, title=title)
-        print(lisrt_of_tasks)
+        list_of_tasks = self.user_service.add_list_of_tasks(user_id=self._current_user_id, title=title)
+        print(print(f"✅ Список '{list_of_tasks.title}' создан"))
+
+        # Мини-меню после создания списка
+        while True:
+            print("\nЧто дальше?")
+            print("1 — Добавить задачу в этот список")
+            print("2 — Вернуться в главное меню")
+
+            choice = input("Выберите действие: ").strip()
+
+            if choice == "1":
+                self.add_task_to_specific_list(list_of_tasks.id)
+
+            elif choice == "2":
+                break
+            else:
+                print("❌ Неверный ввод, попробуйте снова")
+
+
+
+    def add_task_to_specific_list(self, list_id: int):
+        value = input("Введите текст задачи: ")
+
+        task = self.user_service.add_task(
+            user_id=self._current_user_id,
+            list_id=list_id,
+            value=value
+        )
+
+        print(f"✅ Задача создана: {task.id} — {task.value}")
+
 
     def create_task(self):
         print("Создание задачи. Выбери список в который нужно добавить задачу")
-        list_id = int(self.choice_lists_of_tasks())
-        value = input("Напиши задачу: ")
-        task = self.user_service.add_task(user_id=self._current_user_id, list_id=list_id, value=value)
-        print(f"задача УСПЕШНО создана \n{task.id} --- {task.value} ")
+        list_id = int(self.select_list_of_tasks())
+        self.add_task_to_specific_list(list_id)
+
+        # Мини-меню после создания и добавления задачи
+        while True:
+            print("\nЧто дальше?")
+            print("1 — Добавить еще задачу в этот список")
+            print("2 — Вернуться в главное меню")
+
+            choice = input("Выберите действие: ").strip()
+
+            if choice == "1":
+                self.add_task_to_specific_list(list_id)
+
+            elif choice == "2":
+                break
+            else:
+                print("❌ Неверный ввод, попробуйте снова")
 
     def show_lists_of_tasks(self):
-        print("Просмотр списков пользователя")
-        #user = self.user_service.get_user_by_id(user_id=self._current_user_id)
+        # Просмотр списков пользователя
+        # user = self.user_service.get_user_by_id(user_id=self._current_user_id)
 
         for list_tasks in self.user.listoftasks:
             print(f"{list_tasks.id} - {list_tasks.title}")
 
+    def select_list_of_tasks(self) -> int | None:
+        while True:
+            print("Выбор списка")
+            self.show_lists_of_tasks()
+            raw = input('Введите номер списка задач - ')
 
-    def choice_lists_of_tasks(self):
-        print("Выбор списка")
-        self.show_lists_of_tasks()
-        list_id = input('Введите номер списка задач - ')
+            if raw.lower() == "q":
+                return None
 
-        try:
-            list_id = int(list_id)
-            print(f"Вы выбрали список - {list_id}")
-            for list_tasks in self.user.listoftasks:
-                if list_tasks.id == list_id:
-                    for task in list_tasks.tasks:
-                        print(f"Задача {task.id} - {task.value} - статус {task.completed}")
-            return list_id
-        except ValueError:
-            print("Ошибка: нужно число")
-            return self.choice_lists_of_tasks()
+            try:
+                return int(raw)
+            except ValueError:
+                print("Ошибка: введите число")
 
+    def display_tasks(self, tasks):
+        if not tasks:
+            print("В этом списке нет задач.")
+            return
 
+        for task in tasks:
+            print(f"Задача {task.id}: {task.value}: статус - {task.completed}")
+
+    def show_tasks(self):
+        list_id = self.select_list_of_tasks()
+
+        tasks = self.user_service.get_tasks(self._current_user_id, list_id)
+
+        self.display_tasks(tasks)
 
 
     def logout(self):
-        print("logout")
+        print("Вы вышли из аккаунта.")
+        self._current_user_id = None
 
 
 

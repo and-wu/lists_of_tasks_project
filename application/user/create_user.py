@@ -42,7 +42,6 @@ class UserService:
         user = self.repo.get_by_id(user_id)
         target_list = None
         for list_of_tasks in user.listoftasks:
-            print(list_of_tasks)
             if list_of_tasks.id == list_id:
                 target_list = list_of_tasks
                 break
@@ -57,6 +56,12 @@ class UserService:
 
         return task
 
+    def get_tasks(self, user_id, list_of_tasks_id):
+        user =  self.repo.get_by_id(user_id)
+
+        for listoftasks in user.listoftasks:
+            if listoftasks.id == list_of_tasks_id:
+                return listoftasks.tasks
 
     def show_list_of_tasks(self, user_id: int) -> list:
         user_lists = []
@@ -64,5 +69,6 @@ class UserService:
         for listoftasks in user.listoftasks:
             user_lists.append((listoftasks.id, listoftasks.title))
         return user_lists
+
 
 
