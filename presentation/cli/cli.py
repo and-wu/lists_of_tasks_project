@@ -1,8 +1,5 @@
 from typing import Callable
-
 from application.user.create_user import UserService
-
-print("Здравствуйте")
 
 class CLI:
     def __init__(self, user_service: UserService):

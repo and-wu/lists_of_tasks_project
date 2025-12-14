@@ -1,13 +1,13 @@
-from pathlib import Path
+class DomainError(Exception):
+    pass
 
-from application.user.create_user import UserService
-from infra.factory import create_repository, DBType
-
-repo = create_repository(
-    db_type=DBType.SQLITE,  # DBType.JSON или DBType.SQLITE
-    path=Path("storage/users"))
-
-service = UserService(repo=repo)
+class UserNotFoundError(DomainError):
+    def __init__(self, message = 'УУУУУУУУУ'):
+        self.message = message
+        super().__init__(message)
 
 
-service.
+try:
+    raise UserNotFoundError()
+except Exception as e:
+    print(e)

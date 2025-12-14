@@ -8,15 +8,15 @@ class UserService:
     def __init__(self, repo: IUserRepository):
         self.repo = repo
 
-    def create_user(self, name, username) -> User:
+    def create_user(self, user_id, name, username) -> User:
         # Проверки
         if self.repo.get_by_username(username):
             raise ValueError("Username already exists")
 
-        user = User(id=0, name=name, username=username)
+        user = User(id=user_id, name=name, username=username)
         self.repo.save(user)
 
-        return User(id=user.id, name=user.name, username=user.username)
+        return User(id=user_id, name=user.name, username=user.username)
 
     def get_user_by_id(self, user_id: int) -> User:
         user = self.repo.get_by_id(user_id)
@@ -63,7 +63,7 @@ class UserService:
             if listoftasks.id == list_of_tasks_id:
                 return listoftasks.tasks
 
-    def show_list_of_tasks(self, user_id: int) -> list:
+    def show_lists_of_tasks(self, user_id: int) -> list:
         user_lists = []
         user = self.repo.get_by_id(user_id)
         for listoftasks in user.listoftasks:

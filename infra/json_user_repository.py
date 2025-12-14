@@ -46,8 +46,8 @@ class JsonUserRepository(IUserRepository):
         return None
 
     def save(self, user: User) -> User:
-        if user.id <= 0 or user.id not in self._data:
-            user.id = self._next_id()
+        #if user.id <= 0 or user.id not in self._data:
+        #    user.id = self._next_id()
         self._data[user.id] = user
         self._save()
 
