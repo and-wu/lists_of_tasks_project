@@ -34,7 +34,7 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
     keyboard.append([
         InlineKeyboardButton(
             text="➕ Добавить новый список",
-            callback_data="list:create"
+            callback_data="create_list"
         )
     ])
     keyboard.append([
@@ -52,7 +52,19 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-def get_tasks_keyboard(tasks) -> InlineKeyboardMarkup:
+def get_extra_task_buttons(list_id) -> list[list[InlineKeyboardButton]]:
+    """
+    Возвращает список строк дополнительных кнопок для клавиатуры задач
+    """
+    return [
+        [InlineKeyboardButton(text="➕ Добавить новую задачу", callback_data=f"task:create:{list_id}")],
+        [InlineKeyboardButton(text="⬅️ Назад к спискам", callback_data="show_lists")]
+    ]
+
+def extra_task_menu(list_id) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=get_extra_task_buttons(list_id))
+
+def get_tasks_keyboard(tasks, list_id) -> InlineKeyboardMarkup:
     keyboard = []
 
     for task in tasks:
@@ -63,18 +75,7 @@ def get_tasks_keyboard(tasks) -> InlineKeyboardMarkup:
             )
         ])
 
-    # дополнительные кнопки
-    keyboard.append([
-        InlineKeyboardButton(
-            text="➕ Добавить новую задачу",
-            callback_data="task:create"
-        )
-    ])
-    keyboard.append([
-        InlineKeyboardButton(
-            text="⬅️ Назад к спискам",
-            callback_data="show_lists"
-        )
-    ])
+    # добавляем дополнительные кнопки
+    keyboard.extend(get_extra_task_buttons(list_id=list_id))
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

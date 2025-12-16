@@ -8,19 +8,12 @@ def say_hello(username):
 
 def get_main_menu_text():
     return "Главное меню:"
-# /create_list_of_tasks 1 — Создать новый список задач
-# /create_task 2 — Создать задачу
-# /show_lists_of_tasks 3 — Показать списки
-# /show_tasks 4 — Показать задачи
-# q — Выйти""")
-#    return text
-
 
 def get_list_selection_text():
     return "Выберите список \nВведите номер (ID) этого списка:"
 
-def get_list_created_text(list_of_tasks):
-    return f"✅ Список '{list_of_tasks.title}' создан"
+def get_list_created_text(list_title):
+    return f"✅ Список '{list_title}' успешно создан"
 
 def get_no_lists_text():
     return "У вас еще нет списков"
@@ -28,18 +21,23 @@ def get_no_lists_text():
 def get_lists_text():
     return "Ваши списки:\n"
 
+def get_list_name_prompt():
+    return "Введите название для списка"
 
 def get_list_selected_text(raw: int):
     return f"✅ Вы выбрали список с ID: {raw}"
 
-def get_no_tasks_text():
-    return "В этом списке нет задач."
+def get_no_tasks_text(list_title: str):
+    return f"В списке '{list_title}' нет задач."
 
 def get_tasks_text(list_title: str):
-    return f"Задачи списка '{list_title}':"
+    return f"Задачи списка --- '{list_title}':"
+
+def get_task_name_prompt():
+    return "Введите текст для задачи"
 
 def get_task_created_text(task):
-    return f"✅ Задача создана: {task.id} — {task.value}"
+    return f"✅ Задача создана: id = {task.id} — {task.value}"
 
 class TelegramView:
     def __init__(self, message: Message):
