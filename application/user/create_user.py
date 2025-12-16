@@ -1,3 +1,5 @@
+from typing import Optional
+
 from domain.task_list import ListOfTasks
 from domain.tasks import Task
 from domain.users import User
@@ -70,5 +72,9 @@ class UserService:
             user_lists.append((listoftasks.id, listoftasks.title))
         return user_lists
 
+    def get_list_by_id(self, user_id: int, list_id: int) -> Optional[ListOfTasks]:
+        user = self.repo.get_by_id(user_id)
 
-
+        for listoftasks in user.listoftasks:
+            if listoftasks.id == list_id:
+                return listoftasks

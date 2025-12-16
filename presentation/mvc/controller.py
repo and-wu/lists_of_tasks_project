@@ -100,7 +100,7 @@ class Controller:
         self.view.main_menu.create_list_text()
         title = self.view.get_list_name()
         list_of_tasks = self.user_service.add_list_of_tasks(user_id=self._current_user_id, title=title)
-        self.view.main_menu.successful_list_create_text(list_of_tasks=list_of_tasks)
+        self.view.main_menu.get_list_created_text(list_of_tasks=list_of_tasks)
 
         while True:
             self.view.main_menu.show_mini_menu()
@@ -124,7 +124,7 @@ class Controller:
             value=value
         )
 
-        self.view.main_menu.successful_task_create(task)
+        self.view.main_menu.get_task_created_text(task)
 
         return task
 
@@ -152,7 +152,7 @@ class Controller:
 
     def show_lists_of_tasks(self):
         if not self.user.listoftasks:
-            self.view.main_menu.not_lists_user()
+            self.view.main_menu.get_no_lists_text()
         self.view.show_lists(self.user.listoftasks)
 
     def show_tasks(self):
@@ -161,15 +161,15 @@ class Controller:
         tasks = self.user_service.get_tasks(self._current_user_id, list_id)
 
         if not tasks:
-            self.view.main_menu.not_tasks_text()
+            self.view.main_menu.get_no_tasks_text()
             return
 
-        self.view.show_tasks(tasks)
+        self.view.get_tasks_text(tasks)
 
     def select_list_of_tasks(self) -> int | None:
         while True:
             self.view.show_lists(self.user.listoftasks)
-            raw = self.view.get_list_id()
+            raw = self.view.get_list_selection_text()
 
             try:
                 return int(raw)

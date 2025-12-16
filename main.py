@@ -12,6 +12,7 @@ from infra.factory import create_repository, DBType
 
 from config_data.config import BOT_TOKEN
 from presentation.telegram.handlers.commands import commands_router
+from presentation.telegram.handlers.callbacks import router as callbacks_router
 
 TOKEN = "YOUR_BOT_TOKEN"
 
@@ -28,6 +29,7 @@ async def start():
     service = UserService(repo=repo)
 
     dp.include_router(commands_router)
+    dp.include_router(callbacks_router)
 
     try:
         # Удаляем возможный вебхук и сбрасываем накопившиеся апдейты
