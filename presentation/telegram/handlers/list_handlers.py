@@ -111,14 +111,13 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
 async def delete_list_start(callback: CallbackQuery, service: UserService):
     user = service.get_user_by_id(callback.from_user.id)
     if not user.listoftasks:
-        await callback.message.edit_text("Списков нет")
+        await callback.message.edit_text(list_view.no_lists)
         await callback.answer()
         return
 
-    await callback.message.edit_text(
-        "Выберите список для удаления:",
-        reply_markup=get_lists_for_delete_keyboard(user.listoftasks)
-    )
+    await callback.message.edit_text(text=list_view.list_delete_choice_prompt,
+                                     reply_markup=get_lists_for_delete_keyboard(user.listoftasks)
+                                     )
     await callback.answer()
 
 
@@ -129,10 +128,9 @@ async def confirm_delete(callback: CallbackQuery, service: UserService):
 
     list_to_delete = service.get_list_by_id(callback.from_user.id, list_id)
 
-    await callback.message.edit_text(
-        f"Точно удалить список '{list_to_delete.title}'?",
-        reply_markup=get_confirm_delete_keyboard(list_id)
-    )
+    await callback.message.edit_text(text=list_view.confirm_delete_list(list_to_delete.title),
+                                     reply_markup=get_confirm_delete_keyboard(list_id)
+                                     )
     await callback.answer()
 
 
@@ -144,7 +142,7 @@ async def delete_list_confirm(callback: CallbackQuery, service: UserService):
     service.delete_list_of_tasks(callback.from_user.id, list_id)
 
     user = service.get_user_by_id(callback.from_user.id)
-    text = "Список удалён ✅\n\n"
+    text = list_view.list_deleted_success
     text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
 
     await callback.message.edit_text(
@@ -152,7 +150,7 @@ async def delete_list_confirm(callback: CallbackQuery, service: UserService):
         parse_mode="Markdown",
         reply_markup=get_lists_keyboard(user.listoftasks)
     )
-    await callback.answer("Список удалён")
+    await callback.answer(text=list_view.list_deleted_success)
 
 
 @router.callback_query(F.data.startswith("list:delete_no:"))
@@ -165,7 +163,7 @@ async def delete_list_cancel(callback: CallbackQuery, service: UserService):
         parse_mode="Markdown",
         reply_markup=get_lists_keyboard(user.listoftasks)
     )
-    await callback.answer("Удаление отменено")
+    await callback.answer(text=list_view.delete_action_canceled)
 
 
 @router.callback_query(F.data == "list:delete_cancel")
@@ -178,4 +176,4 @@ async def cancel_delete_start(callback: CallbackQuery, service: UserService):
         parse_mode="Markdown",
         reply_markup=get_lists_keyboard(user.listoftasks)
     )
-    await callback.answer("Отмена")
+    await callback.answer(text=list_view.delete_action_canceled)

@@ -30,7 +30,7 @@ async def show_tasks(callback: CallbackQuery, service: UserService):
         await callback.answer()
         return
 
-    text = task_view.tasks_text(task_list.title)
+    text = task_view.get_list_title(task_list.title)
     await callback.message.edit_text(text=text,
                                      parse_mode="Markdown",
                                      reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id))
@@ -79,7 +79,7 @@ async def process_task_text(message: Message, state: FSMContext, service: UserSe
     tasks = service.get_tasks(user_id=message.from_user.id, list_of_tasks_id=list_id)
 
     text = task_view.task_created(task) + "\n\n"
-    text += task_view.tasks_text(task_list.title)
+    text += task_view.get_list_title(task_list.title)
 
     await message.answer(text=text,
                          parse_mode="Markdown",
@@ -104,7 +104,7 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
     task_list = service.get_list_by_id(user_id=user_id, list_id=list_id)
     tasks = service.get_tasks(user_id=user_id, list_of_tasks_id=list_id)
 
-    text = task_view.tasks_text(task_list.title)
+    text = task_view.get_list_title(task_list.title)
 
     await callback.message.edit_text(text=text,
                          parse_mode="Markdown",
@@ -118,7 +118,7 @@ async def select_task(callback: CallbackQuery, service: UserService):
 
     task, list_id = service.get_task_with_list(callback.from_user.id, task_id)
 
-    text = f"📌 Задача:\n\n{task.value}"
+    text = task_view.task_text(task)
 
     await callback.message.edit_text(
         text=text,
@@ -138,7 +138,7 @@ async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserSer
     await state.set_state(TaskStates.waiting_for_new_task_text)
 
     await callback.message.edit_text(
-        text=task_view.task_name_empty,
+        text=task_view.task_name_prompt,
         reply_markup=get_cancel_keyboard("task_text")
     )
     await callback.answer()
@@ -167,7 +167,7 @@ async def process_new_task_text(message: Message,state: FSMContext,service: User
 
     await state.clear()
 
-    text = f"✅ Задача обновлена:\n\n{task.value}"
+    text = task_view.task_updated_success(task=task)
 
     await message.answer(
         text=text,
@@ -184,14 +184,14 @@ async def back_to_tasks(callback: CallbackQuery, service: UserService):
 
     task_list = service.get_list_by_id(user_id=user_id, list_id=list_id)
     if not task_list:
-        await callback.message.edit_text("Список не найден")
+        await callback.message.edit_text(text=task_view.list_not_found_error)
         await callback.answer()
         return
 
     tasks = service.get_tasks(user_id=user_id, list_of_tasks_id=list_id)
 
     await callback.message.edit_text(
-        text=task_view.tasks_text(task_list.title),
+        text=task_view.get_list_title(task_list.title),
         parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id)
     )
@@ -206,7 +206,6 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
     """
     # достаём сохранённые данные
     data = await state.get_data()
-    list_id = data.get("list_id")
     task_id = data["task_id"]
 
     # очищаем состояние
@@ -215,7 +214,7 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
 
     task, list_id = service.get_task_with_list(callback.from_user.id, task_id)
 
-    text = f"📌 Задача:\n\n{task.value}"
+    text = task_view.task_text(task)
 
     await callback.message.edit_text(
         text=text,
@@ -239,14 +238,14 @@ async def toggle_task_completed(callback: CallbackQuery, service: UserService):
     # сохраняем пользователя
     service.save_user(user_id)
 
-    text = f"📌 Задача:\n\n{task.value}"
+    text = task_view.task_text(task)
 
     await callback.message.edit_text(
         text=text,
         reply_markup=get_task_detail_keyboard(task, list_id)
     )
 
-    await callback.answer("Статус обновлён")
+    await callback.answer(text=task_view.status_updated_success)
 
 @router.callback_query(F.data.startswith("task:delete:"))
 async def delete_task(callback: CallbackQuery, service: UserService):
@@ -259,7 +258,7 @@ async def delete_task(callback: CallbackQuery, service: UserService):
     )
 
     await callback.message.edit_text(
-        text=f"❗ Точно удалить задачу?\n\n«{task.value}»",
+        text=task_view.confirm_delete_task(task.value),
         reply_markup=get_confirm_delete_task_keyboard(task_id, list_id)
     )
     await callback.answer()
@@ -275,15 +274,15 @@ async def delete_task_yes(callback: CallbackQuery, service: UserService):
     task_list = service.get_list_by_id(callback.from_user.id,list_id)
     tasks = service.get_tasks(callback.from_user.id, list_id)
 
-    text = "🗑 Задача удалена\n\n"
-    text += (task_view.tasks_text(task_list.title) if tasks else task_view.no_tasks_in_list(task_list.title))
+    text = task_view.task_delete_success
+    text += (task_view.get_list_title(task_list.title) if tasks else task_view.no_tasks_in_list(task_list.title))
 
     await callback.message.edit_text(text=text,
                                      parse_mode="Markdown",
                                      reply_markup=get_tasks_keyboard(tasks, list_id)
                                      )
 
-    await callback.answer("Удалено")
+    await callback.answer(text=task_view.task_delete_success)
 
 @router.callback_query(F.data.startswith("tasks:delete_no:"))
 async def delete_task_no(callback: CallbackQuery, service: UserService):
@@ -293,10 +292,10 @@ async def delete_task_no(callback: CallbackQuery, service: UserService):
     task_list = service.get_list_by_id(callback.from_user.id, list_id)
     tasks = service.get_tasks(callback.from_user.id, list_id)
 
-    await callback.message.edit_text(text=task_view.tasks_text(task_list.title),
+    await callback.message.edit_text(text=task_view.get_list_title(task_list.title),
                                      parse_mode="Markdown",
                                      reply_markup=get_tasks_keyboard(tasks, list_id)
                                      )
 
-    await callback.answer("Удаление отменено")
+    await callback.answer(text=task_view.delete_action_canceled)
 
