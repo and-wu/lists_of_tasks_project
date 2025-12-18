@@ -1,57 +1,108 @@
 from aiogram.types import Message
+from dataclasses import dataclass
+
+from domain.tasks import Task
 
 
-def say_hello(username):
-    return f"Привет {username}!\nЯ бот для ведения списков задач."
+class BotMessages:
+    """Общие тексты бота."""
+
+    main_menu: str = "Главное меню:"
+
+    @staticmethod
+    def say_hello(username: str) -> str:
+        return f"Привет {username}!\nЯ бот для ведения списков задач."
+
+
+@dataclass
+class ListView:
+    """Тексты, связанные со списками задач."""
+
+    main_menu: str = "Главное меню:"
+    no_lists: str = "У вас еще нет списков"
+    lists_text_header: str = "Ваши списки:\n"
+    list_name_prompt: str = "Введите название для списка"
+    list_name_empty: str = "Название не может быть пустым.\n Попробуйте снова:"
+    action_canceled: str = "Действие отменено"
+
+    def list_created(self, list_title: str) -> str:
+        return f"✅ Список '{list_title}' успешно создан"
+
+    def list_selected(self, list_id: int) -> str:
+        return f"✅ Вы выбрали список с ID: {list_id}"
+
+    def lists_text(self) -> str:
+        return self.lists_text_header
+
+@dataclass
+class TaskView:
+    """Тексты, связанные с задачами."""
+
+    task_name_prompt: str = "Введите текст для задачи"
+    task_name_empty: str = "Текст задачи не может быть пустым.\n Попробуйте снова:"
+
+    def no_tasks_in_list(self, list_title: str) -> str:
+        return f"В списке '{list_title}' нет задач."
+
+    def task_created(self, task: Task) -> str:
+        return f"✅ Задача создана: id = {task.id} — {task.value}"
+
+    def tasks_text(self, list_title: str) -> str:
+        return f"{list_title}"
+
+    def confirm_delete_task(self, task_value: str) -> str:
+        return f"❗ Точно удалить задачу?\n\n«{task_value}»"
+
+    def action_canceled(self) -> str:
+        return "Действие отменено"
 
 
 
-def get_main_menu_text():
-    return "Главное меню:"
 
-def get_list_selection_text():
-    return "Выберите список \nВведите номер (ID) этого списка:"
 
-def get_list_created_text(list_title):
-    return f"✅ Список '{list_title}' успешно создан"
 
-def get_no_lists_text():
-    return "У вас еще нет списков"
 
-def get_lists_text():
-    return "Ваши списки:\n"
+#def say_hello(username) -> str:
+#    return f"Привет {username}!\nЯ бот для ведения списков задач."
 
-def get_list_name_prompt():
-    return "Введите название для списка"
+#def get_main_menu_text() -> str:
+#    return "Главное меню:"
 
-def get_list_selected_text(raw: int):
-    return f"✅ Вы выбрали список с ID: {raw}"
+#def get_list_selection_text() -> str:
+#    return "Выберите список \nВведите номер (ID) этого списка:"
 
-def get_no_tasks_text(list_title: str):
-    return f"В списке '{list_title}' нет задач."
+#def get_list_created_text(list_title) -> str:
+#    return f"✅ Список '{list_title}' успешно создан"
 
-def get_tasks_text(list_title: str):
-    return f"Задачи списка --- '{list_title}':"
+#def get_no_lists_text() -> str:
+#    return "У вас еще нет списков"
 
-def get_task_name_prompt():
-    return "Введите текст для задачи"
+#def get_lists_text() -> str:
+#    return "Ваши списки:\n"
 
-def get_task_created_text(task):
-    return f"✅ Задача создана: id = {task.id} — {task.value}"
+#def get_list_name_prompt() -> str:
+#    return "Введите название для списка"
 
-class TelegramView:
-    def __init__(self, message: Message):
-        self.message = message
+#def get_list_name_empty_text() -> str:
+#    return "Название не может быть пустым. Попробуйте снова:"
 
-    async def show(self, text: str):
-        await self.message.answer(text)
+#def get_list_selected_text(raw: int) -> str:
+#    return f"✅ Вы выбрали список с ID: {raw}"
 
-    async def error(self, e: Exception):
-        await self.message.answer(f"❌ Ошибка: {e}")
+#def get_no_tasks_text(list_title: str) -> str:
+#    return f"В списке '{list_title}' нет задач."
 
-    async def show_lists(self, lists):
-        text = "📋 *Ваши списки:*\n\n"
-        for l in lists:
-            text += f"▪️ *{l.id}* — {l.title}\n"
+#def get_tasks_text(list_title: str) -> str:
+#    return f"{list_title}"
 
-        await self.message.answer(text, parse_mode="Markdown")
+#def get_task_name_prompt() -> str:
+#    return "Введите текст для задачи"
+
+#def get_task_name_empty_text() -> str:
+#    return "Текст задачи не может быть пустым. Попробуйте снова:"
+
+#def get_task_created_text(task) -> str:
+#    return f"✅ Задача создана: id = {task.id} — {task.value}"
+
+#def get_action_canceled_text() -> str:
+#    return "Действие отменено"

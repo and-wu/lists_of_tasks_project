@@ -4,11 +4,11 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from application.user.create_user import UserService
-from presentation.telegram.keyboards import get_main_menu_keyboard
-from presentation.telegram.texts import get_main_menu_text, say_hello
+from presentation.telegram.keyboards.list_keyboards import get_main_menu_keyboard
+from presentation.telegram.texts import BotMessages
 
 commands_router = Router()
-
+bot_messages = BotMessages()
 
 # ==============================
 #            /start
@@ -23,9 +23,9 @@ async def cmd_start(message: Message, service: UserService):
         print(e)
 
     text = (
-            say_hello(username=message.from_user.first_name)
+            bot_messages.say_hello(username=message.from_user.first_name)
             + "\n\n"
-            + get_main_menu_text()
+            + bot_messages.main_menu
     )
 
     await message.answer(

@@ -22,7 +22,6 @@ class JsonUserRepository(IUserRepository):
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
                 raw = json.load(f)
-                print(raw)
                 return {int(k): User.from_dict(**v) for k, v in raw.items()}
         except json.JSONDecodeError:
             return {}
@@ -59,3 +58,40 @@ class JsonUserRepository(IUserRepository):
     def delete(self, user_id: int) -> None:
         self._data.pop(user_id, None)
         self._save()
+
+    def delete_list(self, user_id: int, list_id: int) -> bool:
+        """
+        Удаляет список пользователя по ID.
+        Возвращает True, если список найден и удалён, иначе False.
+        """
+        user = self.get_by_id(user_id)
+        if not user:
+            return False
+
+        # удаляем список из списка списков
+        for i, lst in enumerate(user.listoftasks):
+            if lst.id == list_id:
+                user.listoftasks.pop(i)
+                self._save()
+                return True
+
+        return False
+
+    def delete_task(self, user_id: int, task_id: int) -> None:
+        """
+            Удаляет задачу пользователя по task_id.
+            Возвращает True, если задача найдена и удалён, иначе False.
+        """
+        user = self.get_by_id(user_id)
+        if not user:
+            return False
+
+        # удаляем список из списка списков
+        for list_of_task in user.listoftasks:
+            for i, task in enumerate(list_of_task.tasks):
+                if task.id == task_id:
+                    list_of_task.tasks.pop(i)
+                    self._save()
+                    return True
+
+        return False
