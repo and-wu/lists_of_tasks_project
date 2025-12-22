@@ -121,3 +121,18 @@ class UserService:
     def save_user(self, user_id: int) -> None:
         user = self.repo.get_by_id(user_id)
         self.repo.save(user)
+
+    def toggle_task_completed(self, user_id: int, task_id: int):
+        """
+        Переключает статус выполнения задачи (completed / not completed)
+        """
+        user = self.repo.get_by_id(user_id)
+
+        for task_list in user.listoftasks:
+            for task in task_list.tasks:
+                if task.id == task_id:
+                    task.completed = not task.completed
+                    self.save_user(user_id)
+                    return task
+
+        raise ValueError(f"Task with id={task_id} not found")

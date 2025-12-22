@@ -1,4 +1,7 @@
+from asyncio.log import logger
+
 from aiogram import Router, F
+from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
@@ -27,18 +30,35 @@ async def go_to_main_menu(callback: CallbackQuery):
     # Закрываем "часики" на кнопке
     await callback.answer()
 
+async def show_lists_view(callback: CallbackQuery, service: UserService, prefix_text: str = ""):
+    """Отображает список задач пользователя"""
+
+    text = prefix_text if prefix_text else ""
+    user = service.get_user_by_id(callback.from_user.id)
+    text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
+
+    try:
+        await callback.message.edit_text(
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=get_lists_keyboard(user.listoftasks)
+        )
+    except TelegramBadRequest:
+        # сообщение удалено — отправляем новое
+        await callback.message.answer(
+            text=text,
+            parse_mode="Markdown",
+            reply_markup=get_lists_keyboard(user.listoftasks)
+        )
+    #except (TelegramBadRequest, TelegramForbiddenError)as e:
+    #    logger.debug(f"show_lists_view edit_text failed: {e}")
 
 @router.callback_query(F.data == "lists:show")
 async def show_lists(callback: CallbackQuery, service: UserService):
     """
     Обработчик кнопки 'Посмотреть списки'
     """
-    user = service.get_user_by_id(callback.from_user.id)
-    text = list_view.lists_text_header if user.listoftasks else list_view.no_lists
-
-    await callback.message.edit_text(text=text,
-                                     parse_mode="Markdown",
-                                     reply_markup=get_lists_keyboard(user.listoftasks))
+    await show_lists_view(callback=callback, service=service)
 
     await callback.answer()  # обязательно закрываем "часики"
 
@@ -50,8 +70,12 @@ async def create_list(callback: CallbackQuery, state: FSMContext):
     """
 
     await state.set_state(ListStates.waiting_for_list_name)  # ставим состояние
-    await callback.message.edit_text(list_view.list_name_prompt,
+    sent_message = await callback.message.edit_text(list_view.list_name_prompt,
                                      reply_markup=get_cancel_keyboard("list"))  # просим ввести название
+
+    # сохраняем ID сообщения бота
+    await state.update_data(prompt_message_id=sent_message.message_id)
+
     await callback.answer()  # закрываем "часики"
 
 
@@ -74,10 +98,16 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
     # Добавляем список через сервис
     service.add_list_of_tasks(message.from_user.id, title=list_title)
 
+    await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
+
+    # удаляем сообщение пользователя
+    try:
+        await message.delete()
+    except TelegramForbiddenError:
+        pass
+
     user = service.get_user_by_id(message.from_user.id)
-
     text = list_view.list_created(list_title=list_title) + "\n\n"
-
     text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
 
     await message.answer(text=text,
@@ -93,16 +123,11 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
     """
     Отмена текущего действия (FSM)
     """
+    await delete_fsm_prompt_message(state=state, bot=callback.bot, chat_id=callback.message.chat.id)
+
     await state.clear()
 
-    user = service.get_user_by_id(callback.from_user.id)
-    text = list_view.lists_text_header if user.listoftasks else list_view.no_lists
-
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=get_lists_keyboard(user.listoftasks)
-    )
+    await show_lists_view(callback=callback, service=service)
 
     await callback.answer(list_view.action_canceled)
 
@@ -128,6 +153,10 @@ async def confirm_delete(callback: CallbackQuery, service: UserService):
 
     list_to_delete = service.get_list_by_id(callback.from_user.id, list_id)
 
+    if not list_to_delete:
+        await callback.answer("Список не найден", show_alert=True)
+        return
+
     await callback.message.edit_text(text=list_view.confirm_delete_list(list_to_delete.title),
                                      reply_markup=get_confirm_delete_keyboard(list_id)
                                      )
@@ -141,39 +170,35 @@ async def delete_list_confirm(callback: CallbackQuery, service: UserService):
 
     service.delete_list_of_tasks(callback.from_user.id, list_id)
 
-    user = service.get_user_by_id(callback.from_user.id)
     text = list_view.list_deleted_success
-    text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
 
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=get_lists_keyboard(user.listoftasks)
-    )
+    await show_lists_view(callback=callback, service=service, prefix_text=text)
     await callback.answer(text=list_view.list_deleted_success)
 
 
 @router.callback_query(F.data.startswith("list:delete_no:"))
 async def delete_list_cancel(callback: CallbackQuery, service: UserService):
-    user = service.get_user_by_id(callback.from_user.id)
-    text = list_view.lists_text_header if user.listoftasks else list_view.no_lists
-
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=get_lists_keyboard(user.listoftasks)
-    )
+    await show_lists_view(callback=callback, service=service)
     await callback.answer(text=list_view.delete_action_canceled)
 
 
 @router.callback_query(F.data == "list:delete_cancel")
 async def cancel_delete_start(callback: CallbackQuery, service: UserService):
-    user = service.get_user_by_id(callback.from_user.id)
-    text = list_view.lists_text_header if user.listoftasks else list_view.no_lists
-
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=get_lists_keyboard(user.listoftasks)
-    )
+    await show_lists_view(callback=callback, service=service)
     await callback.answer(text=list_view.delete_action_canceled)
+
+
+async def delete_fsm_prompt_message(state: FSMContext, bot, chat_id: int):
+    data = await state.get_data()
+    prompt_message_id = data.get("prompt_message_id")
+
+    if not prompt_message_id:
+        return
+
+    try:
+        await bot.delete_message(
+            chat_id=chat_id,
+            message_id=prompt_message_id
+        )
+    except TelegramForbiddenError:
+        pass

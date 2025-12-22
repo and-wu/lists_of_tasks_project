@@ -77,13 +77,13 @@ def get_confirm_delete_task_keyboard(task_id: int, list_id: int) -> InlineKeyboa
             [
                 InlineKeyboardButton(
                     text="✅ Да, удалить",
-                    callback_data=f"tasks:delete_yes:{task_id}:{list_id}"
+                    callback_data=f"tasks:delete:yes:{task_id}:{list_id}"
                 )
             ],
             [
                 InlineKeyboardButton(
                     text="❌ Нет",
-                    callback_data=f"tasks:delete_no:{list_id}"
+                    callback_data=f"tasks:delete:no:{task_id}:{list_id}"
                 )
             ]
         ]

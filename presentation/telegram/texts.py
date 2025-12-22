@@ -71,54 +71,10 @@ class TaskView:
     def confirm_delete_task(self, task_value: str) -> str:
         return f"❗ Точно удалить задачу?\n\n«{task_value}»"
 
-
-
-
-
-
-
-
-#def say_hello(username) -> str:
-#    return f"Привет {username}!\nЯ бот для ведения списков задач."
-
-#def get_main_menu_text() -> str:
-#    return "Главное меню:"
-
-#def get_list_selection_text() -> str:
-#    return "Выберите список \nВведите номер (ID) этого списка:"
-
-#def get_list_created_text(list_title) -> str:
-#    return f"✅ Список '{list_title}' успешно создан"
-
-#def get_no_lists_text() -> str:
-#    return "У вас еще нет списков"
-
-#def get_lists_text() -> str:
-#    return "Ваши списки:\n"
-
-#def get_list_name_prompt() -> str:
-#    return "Введите название для списка"
-
-#def get_list_name_empty_text() -> str:
-#    return "Название не может быть пустым. Попробуйте снова:"
-
-#def get_list_selected_text(raw: int) -> str:
-#    return f"✅ Вы выбрали список с ID: {raw}"
-
-#def get_no_tasks_text(list_title: str) -> str:
-#    return f"В списке '{list_title}' нет задач."
-
-#def get_tasks_text(list_title: str) -> str:
-#    return f"{list_title}"
-
-#def get_task_name_prompt() -> str:
-#    return "Введите текст для задачи"
-
-#def get_task_name_empty_text() -> str:
-#    return "Текст задачи не может быть пустым. Попробуйте снова:"
-
-#def get_task_created_text(task) -> str:
-#    return f"✅ Задача создана: id = {task.id} — {task.value}"
-
-#def get_action_canceled_text() -> str:
-#    return "Действие отменено"
+    def task_new_text_prompt(self, task):
+        return (
+        f"✏️ <b>Редактирование задачи</b>\n\n"
+        f"<b>Текущий текст:</b>\n"
+        f"<code>{task.value}</code>\n\n"
+        f"Отправьте новый текст задачи:"
+    )
