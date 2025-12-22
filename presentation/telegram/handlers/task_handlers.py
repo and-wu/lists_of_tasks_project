@@ -1,8 +1,10 @@
 from aiogram import Router, F
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from application.user.create_user import UserService
+from presentation.telegram.handlers.list_handlers import delete_fsm_prompt_message
 from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView
@@ -79,6 +81,14 @@ async def process_task_text(message: Message, state: FSMContext, service: UserSe
                             value=task_text
                             )
 
+    await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
+
+    # удаляем сообщение пользователя
+    try:
+        await message.delete()
+    except TelegramForbiddenError:
+        pass
+
     await state.clear()  # очищаем состояние
 
     task_list = service.get_list_by_id(user_id=message.from_user.id, list_id=list_id)
@@ -145,14 +155,15 @@ async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserSer
     await state.update_data(task_id=task_id, list_id=list_id)
     await state.set_state(TaskStates.waiting_for_new_task_text)
 
-    #await callback.message.edit_text(text=task_view.task_name_prompt,
-    #                                 reply_markup=get_cancel_keyboard("task_text")
-    #                                 )
+    text = task_view.task_new_text_prompt(task)
 
-    await callback.message.edit_text(text=task_view.task_new_text_prompt(task),
+    sent_message = await callback.message.edit_text(text=text,
                                      parse_mode="HTML",
                                      reply_markup=get_cancel_keyboard("task_text")
                                      )
+    # сохраняем ID сообщения в FSM, чтобы потом удалить
+    await state.update_data(prompt_message_id=sent_message.message_id)
+
     await callback.answer()
 
 @router.message(TaskStates.waiting_for_new_task_text)
@@ -169,6 +180,21 @@ async def process_new_task_text(message: Message,state: FSMContext,service: User
     data = await state.get_data()
     task_id = data["task_id"]
     list_id = data["list_id"]
+
+    # удаляем сообщение с приглашением к вводу
+    prompt_message_id = data.get("prompt_message_id")
+    if prompt_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=prompt_message_id)
+            #await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
+        except:
+            pass
+
+    # удаляем сообщение пользователя
+    try:
+        await message.delete()
+    except:
+        pass
 
     # обновляем задачу
     task = service.update_task_text(
