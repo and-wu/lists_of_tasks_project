@@ -2,9 +2,6 @@ from typing import Protocol, runtime_checkable
 
 from domain.users import User
 
-# =============================================
-# Чистый интерфейс репозитория
-# =============================================
 
 @runtime_checkable
 class IUserRepository(Protocol):

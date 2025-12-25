@@ -40,6 +40,7 @@ class ListView:
     def lists_text(self) -> str:
         return self.lists_text_header
 
+
 @dataclass
 class TaskView:
     """Тексты, связанные с задачами."""
@@ -72,8 +73,8 @@ class TaskView:
 
     def task_new_text_prompt(self, task) -> str:
         return (
-        f"✏️ <b>Редактирование задачи</b>\n\n"
-        f"<b>Текущий текст:</b>\n"
-        f"<code>{task.value}</code>\n\n"
-        f"Отправьте новый текст задачи:"
-    )
+            f"✏️ <b>Редактирование задачи</b>\n\n"
+            f"<b>Текущий текст:</b>\n"
+            f"<code>{task.value}</code>\n\n"
+            f"Отправьте новый текст задачи:"
+        )

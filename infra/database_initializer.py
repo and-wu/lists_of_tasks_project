@@ -1,9 +1,6 @@
 import sqlite3
 from pathlib import Path
 
-# =============================================
-# Отдельный сервис инициализации (миграции)
-# =============================================
 
 class DatabaseInitializer:
     @staticmethod

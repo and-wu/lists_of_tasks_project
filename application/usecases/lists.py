@@ -10,7 +10,9 @@ class CreateNewListUseCase:
         self.user_service = user_service
 
     async def execute(self, user_id: int, list_title: str) -> ListOfTasks:
-        return self.user_service.add_list_of_tasks(user_id, list_title, remind_time=None)
+        return self.user_service.add_list_of_tasks(
+            user_id, list_title, remind_time=None
+        )
 
 
 class AddRemindTimeUseCase:

@@ -1,7 +1,7 @@
-
 from typing import TYPE_CHECKING
 
 from application.user.create_user import UserService
+from domain.tasks import Task
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -30,7 +30,6 @@ class CLI:
             "q": ("Выйти из программы", self.quit),
         }
 
-
     def run(self) -> None:
         while self._running:
             # Выбираем правильное меню
@@ -39,7 +38,7 @@ class CLI:
             else:
                 menu = self.main_actions
 
-            for (_value, func) in menu.values():
+            for _value, func in menu.values():
                 pass
 
             choice = input("Выберите действие: ")
@@ -51,11 +50,9 @@ class CLI:
 
             _, func = action
             try:
-                func()   # вызываем метод класса CLI
+                func()  # вызываем метод класса CLI
             except Exception:
                 pass
-
-
 
     def select(self) -> None:
         users = self.user_service.repo.all()
@@ -67,7 +64,9 @@ class CLI:
             if users:
                 for user in users:
                     pass
-                user_id = input("введите число соответсвующее имени для выбора пользователя: ").strip()
+                user_id = input(
+                    "введите число соответсвующее имени для выбора пользователя: "
+                ).strip()
 
                 try:
                     user = self.user_service.repo.get_by_id(user_id=int(user_id))
@@ -79,7 +78,6 @@ class CLI:
                     break
                 except Exception:
                     pass
-
 
     def creat(self) -> None:
         name = input("введите ваше имя: ")
@@ -94,17 +92,17 @@ class CLI:
             except ValueError:
                 pass
 
-
     def quit(self) -> None:
         self._running = False
 
     def create_lists_of_tasks(self) -> None:
         title = input("Введите название для списка задач - ")
-        list_of_tasks = self.user_service.add_list_of_tasks(user_id=self._current_user_id, title=title)
+        list_of_tasks = self.user_service.add_list_of_tasks(
+            user_id=self._current_user_id, title=title
+        )
 
-        # Мини-меню после создания списка
+
         while True:
-
             choice = input("Выберите действие: ").strip()
 
             if choice == "1":
@@ -115,8 +113,6 @@ class CLI:
             else:
                 pass
 
-
-
     def add_task_to_specific_list(self, list_id: int) -> None:
         value = input("Введите текст задачи: ")
 
@@ -126,15 +122,12 @@ class CLI:
             value=value,
         )
 
-
-
     def create_task(self) -> None:
         list_id = int(self.select_list_of_tasks())
         self.add_task_to_specific_list(list_id)
 
         # Мини-меню после создания и добавления задачи
         while True:
-
             choice = input("Выберите действие: ").strip()
 
             if choice == "1":
@@ -146,7 +139,6 @@ class CLI:
                 pass
 
     def show_lists_of_tasks(self) -> None:
-
         for _list_tasks in self.user.listoftasks:
             pass
 
@@ -163,7 +155,7 @@ class CLI:
             except ValueError:
                 pass
 
-    def display_tasks(self, tasks) -> None:
+    def display_tasks(self, tasks: list[Task]) -> None:
         if not tasks:
             return
 

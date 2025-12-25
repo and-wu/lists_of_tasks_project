@@ -32,7 +32,7 @@ class DataBase:
                 )
             """)
 
-    def get_database(self: Path) -> DataBase:
-        return DataBase(self.as_posix())
+def get_database(self: Path) -> DataBase:
+    return DataBase(self.as_posix())
 
 

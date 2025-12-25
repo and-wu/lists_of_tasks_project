@@ -1,8 +1,5 @@
 from dataclasses import dataclass
 
-# =============================================
-# Модель
-# =============================================
 
 @dataclass
 class Task:
@@ -19,10 +16,9 @@ class Task:
             raise ValueError(msg)
         self.name = new_name
 
-
     def to_dict(self) -> dict:
         return {"id": self.id, "value": self.value, "completed": self.completed}
 
     @classmethod
-    def from_dict(cls, id, value, completed) -> "Task":
+    def from_dict(cls, id: int, value: str, completed: bool) -> "Task":  # noqa: FBT001
         return cls(id=id, value=value, completed=completed)

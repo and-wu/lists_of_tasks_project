@@ -5,9 +5,6 @@ from infra.database_initializer import DatabaseInitializer
 from infra.json_user_repository import JsonUserRepository
 from infra.sqlite_user_repository import SqliteUserRepository
 
-# =============================================
-# Фабрика — единый интерфейс
-# =============================================
 
 class DBType:
     SQLITE = "sqlite"

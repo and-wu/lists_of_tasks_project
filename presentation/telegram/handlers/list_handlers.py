@@ -39,7 +39,9 @@ async def go_to_main_menu(callback: CallbackQuery) -> None:
 
 
 async def show_lists_view(
-    callback: CallbackQuery, service: UserService, prefix_text: str = "",
+    callback: CallbackQuery,
+    service: UserService,
+    prefix_text: str = "",
 ) -> None:
     """Отображает список задач пользователя."""
     text = prefix_text if prefix_text else ""
@@ -59,8 +61,6 @@ async def show_lists_view(
             parse_mode="Markdown",
             reply_markup=get_lists_keyboard(user.listoftasks),
         )
-    # except (TelegramBadRequest, TelegramForbiddenError)as e:
-    #    logger.debug(f"show_lists_view edit_text failed: {e}")
 
 
 @router.callback_query(F.data == "lists:show")
@@ -81,7 +81,8 @@ async def create_list(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик кнопки 'Создать список / Добавить новый список'."""
     await state.set_state(ListStates.waiting_for_list_name)  # ставим состояние
     sent_message = await callback.message.edit_text(
-        list_view.list_name_prompt, reply_markup=get_cancel_keyboard("list"),
+        list_view.list_name_prompt,
+        reply_markup=get_cancel_keyboard("list"),
     )  # просим ввести название
 
     # сохраняем ID сообщения бота
@@ -94,13 +95,16 @@ async def create_list(callback: CallbackQuery, state: FSMContext) -> None:
 # Message: пользователь вводит название списка
 # -------------------------------
 @router.message(ListStates.waiting_for_list_name)
-async def process_list_name(message: Message, state: FSMContext, service: UserService) -> None:
+async def process_list_name(
+    message: Message, state: FSMContext, service: UserService
+) -> None:
     """Обрабатывает текст пользователя, создаёт новый список и сбрасывает состояние."""
     list_title = message.text.strip()
 
     if not list_title:
         await message.answer(
-            text=list_view.list_name_empty, reply_markup=get_cancel_keyboard("list"),
+            text=list_view.list_name_empty,
+            reply_markup=get_cancel_keyboard("list"),
         )
         return
 
@@ -151,7 +155,9 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
     F.data.in_(["list_remind_yes", "list_remind_no"]),
 )
 async def process_remind_decision(
-    callback: CallbackQuery, state: FSMContext, service: UserService,
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     data = await state.get_data()
     data["list_title"]
@@ -159,14 +165,17 @@ async def process_remind_decision(
 
     # 🔥 удаляем сообщение бота с просьбой ввести название
     await delete_fsm_prompt_message(
-        state=state, bot=callback.bot, chat_id=callback.message.chat.id,
+        state=state,
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
     )
 
     # 🔥 удаляем сообщение пользователя с названием списка (✔️ корректно)
     if user_message_id:
         with contextlib.suppress(TelegramForbiddenError):
             await callback.bot.delete_message(
-                chat_id=callback.message.chat.id, message_id=user_message_id,
+                chat_id=callback.message.chat.id,
+                message_id=user_message_id,
             )
 
     if callback.data == "list_remind_no":
@@ -245,11 +254,15 @@ async def process_remind_time(
 
 @router.callback_query(F.data == "list:cancel")
 async def cancel_action(
-    callback: CallbackQuery, state: FSMContext, service: UserService,
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     """Отмена текущего действия (FSM)."""
     await delete_fsm_prompt_message(
-        state=state, bot=callback.bot, chat_id=callback.message.chat.id,
+        state=state,
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
     )
 
     await state.clear()

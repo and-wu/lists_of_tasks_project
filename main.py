@@ -19,13 +19,15 @@ from presentation.telegram.handlers.task_handlers import router as task_callback
 
 TOKEN = "YOUR_BOT_TOKEN"
 
+
 async def start() -> None:
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
 
     repo = create_repository(
         db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
-        path=Path("storage/users"))
+        path=Path("storage/users"),
+    )
 
     # ⏰ APScheduler
     scheduler = AsyncIOScheduler()

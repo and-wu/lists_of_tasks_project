@@ -1,4 +1,3 @@
-
 import contextlib
 
 from aiogram import Router
@@ -12,20 +11,20 @@ from presentation.telegram.texts import BotMessages
 commands_router = Router()
 bot_messages = BotMessages()
 
-# ==============================
-#            /start
-# ==============================
 
 @commands_router.message(CommandStart())
 async def cmd_start(message: Message, service: UserService) -> None:
     with contextlib.suppress(Exception):
-        service.create_user(user_id=message.from_user.id, name=message.from_user.first_name,
-                            username=message.from_user.username)
+        service.create_user(
+            user_id=message.from_user.id,
+            name=message.from_user.first_name,
+            username=message.from_user.username,
+        )
 
     text = (
-            bot_messages.say_hello(username=message.from_user.first_name)
-            + "\n\n"
-            + bot_messages.main_menu
+        bot_messages.say_hello(username=message.from_user.first_name)
+        + "\n\n"
+        + bot_messages.main_menu
     )
 
     await message.answer(

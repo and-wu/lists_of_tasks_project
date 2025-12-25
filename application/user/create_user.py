@@ -10,8 +10,7 @@ class UserService:
     def __init__(self, repo: IUserRepository) -> None:
         self.repo = repo
 
-    def create_user(self, user_id, name, username) -> User:
-        # Проверки
+    def create_user(self, user_id: int, name: str, username: str | None) -> User:
         if self.repo.get_by_username(username):
             msg = "Username already exists"
             raise ValueError(msg)
@@ -28,14 +27,17 @@ class UserService:
             raise ValueError(msg)
         return user
 
-
-    def add_list_of_tasks(self, user_id: int, title, remind_time: None | time) -> ListOfTasks:
+    def add_list_of_tasks(
+        self, user_id: int, title: str, remind_time: None | time
+    ) -> ListOfTasks:
         user = self.repo.get_by_id(user_id)
         max_id = 0
         for list_tasks in user.listoftasks:
             max_id = max(list_tasks.id, max_id) + 1
 
-        list_of_tasks = ListOfTasks(id=max_id, title=title, owner_id=user_id, remind_time=remind_time)
+        list_of_tasks = ListOfTasks(
+            id=max_id, title=title, owner_id=user_id, remind_time=remind_time
+        )
         user.listoftasks.append(list_of_tasks)
 
         self.repo.save(user)
@@ -44,13 +46,11 @@ class UserService:
 
     def _next_task_id(self, user: User) -> int:
         all_tasks = [
-            task.id
-            for task_list in user.listoftasks
-            for task in task_list.tasks
+            task.id for task_list in user.listoftasks for task in task_list.tasks
         ]
         return max(all_tasks, default=-1) + 1
 
-    def add_task(self, user_id: int, list_id: int, value) -> Task:
+    def add_task(self, user_id: int, list_id: int, value: str) -> Task:
         user = self.repo.get_by_id(user_id)
         target_list = None
         for list_of_tasks in user.listoftasks:
@@ -69,14 +69,13 @@ class UserService:
 
         return task
 
-    def get_tasks(self, user_id, list_of_tasks_id):
-        user =  self.repo.get_by_id(user_id)
+    def get_tasks(self, user_id: str | int, list_of_tasks_id: int):
+        user = self.repo.get_by_id(user_id)
 
         for listoftasks in user.listoftasks:
             if listoftasks.id == list_of_tasks_id:
                 return listoftasks.tasks
         return None
-
 
     def show_lists_of_tasks(self, user_id: int) -> list:
         user_lists = []
@@ -121,7 +120,7 @@ class UserService:
         user = self.repo.get_by_id(user_id)
         self.repo.save(user)
 
-    def toggle_task_completed(self, user_id: int, task_id: int):
+    def toggle_task_completed(self, user_id: int, task_id: int) -> Task | None:
         """Переключает статус выполнения задачи (completed / not completed)."""
         user = self.repo.get_by_id(user_id)
 

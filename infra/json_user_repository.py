@@ -4,10 +4,6 @@ from pathlib import Path
 from domain.interfaces.user_repository import IUserRepository
 from domain.users import User
 
-# =============================================
-# Реализации JSON — ТОЛЬКО работа с данными, без создания таблиц!
-# =============================================
-
 
 class JsonUserRepository(IUserRepository):
     def __init__(self, file_path: Path) -> None:
@@ -43,8 +39,6 @@ class JsonUserRepository(IUserRepository):
         return None
 
     def save(self, user: User) -> User:
-        #if user.id <= 0 or user.id not in self._data:
-        #    user.id = self._next_id()
         self._data[user.id] = user
         self._save()
 
@@ -59,6 +53,7 @@ class JsonUserRepository(IUserRepository):
 
     def delete_list(self, user_id: int, list_id: int) -> bool:
         """Удаляет список пользователя по ID.
+
         Возвращает True, если список найден и удалён, иначе False.
         """
         user = self.get_by_id(user_id)
@@ -74,8 +69,9 @@ class JsonUserRepository(IUserRepository):
 
         return False
 
-    def delete_task(self, user_id: int, task_id: int) -> None:
+    def delete_task(self, user_id: int, task_id: int) -> bool:
         """Удаляет задачу пользователя по task_id.
+
         Возвращает True, если задача найдена и удалён, иначе False.
         """
         user = self.get_by_id(user_id)
