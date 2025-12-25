@@ -45,7 +45,6 @@ async def show_tasks(callback: CallbackQuery, service: UserService) -> None:
     text = task_view.get_list_title(task_list.title)
     await callback.message.edit_text(
         text=text,
-        parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
     )
     await callback.answer()
@@ -111,7 +110,6 @@ async def process_task_text(
 
     await message.answer(
         text=text,
-        parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
     )
 
@@ -137,7 +135,6 @@ async def cancel_action_create(
 
     await callback.message.edit_text(
         text=text,
-        parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
     )
 
@@ -256,7 +253,6 @@ async def back_to_tasks(callback: CallbackQuery, service: UserService) -> None:
 
     await callback.message.edit_text(
         text=task_view.get_list_title(task_list.title),
-        parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
     )
 
@@ -346,7 +342,6 @@ async def delete_task_yes(callback: CallbackQuery, service: UserService) -> None
 
     await callback.message.edit_text(
         text=text,
-        parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks, list_id),
     )
 

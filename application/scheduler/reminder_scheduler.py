@@ -33,14 +33,12 @@ async def send_list_reminder(
         await bot.send_message(
             chat_id=user_id,
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
         )
     except TelegramBadRequest:
         await bot.send_message(
             chat_id=user_id,
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
         )
 

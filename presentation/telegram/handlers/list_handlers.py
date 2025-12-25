@@ -31,7 +31,6 @@ async def go_to_main_menu(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         text=list_view.main_menu,
         reply_markup=get_main_menu_keyboard(),
-        parse_mode="Markdown",
     )
     await callback.answer()
 
@@ -49,13 +48,11 @@ async def show_lists_view(
     try:
         await callback.message.edit_text(
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_lists_keyboard(user.listoftasks),
         )
     except TelegramBadRequest:
         await callback.message.answer(
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_lists_keyboard(user.listoftasks),
         )
 
@@ -210,7 +207,6 @@ async def process_remind_time(
 
     await message.answer(
         text=text,
-        parse_mode="Markdown",
         reply_markup=get_lists_keyboard(user.listoftasks),
     )
 
