@@ -7,9 +7,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from application.user.create_user import UserService
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard
-from presentation.telegram.texts import ListView
-
-list_view = ListView()
 
 
 async def send_list_reminder(

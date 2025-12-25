@@ -47,8 +47,7 @@ async def show_tasks(callback: CallbackQuery, service: UserService) -> None:
         parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
     )
-
-    await callback.answer()  # обязательно закрываем "часики"
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("task:create"))

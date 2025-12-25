@@ -17,8 +17,6 @@ from presentation.telegram.handlers.commands import commands_router
 from presentation.telegram.handlers.list_handlers import router as list_callbacks_router
 from presentation.telegram.handlers.task_handlers import router as task_callbacks_router
 
-TOKEN = "YOUR_BOT_TOKEN"
-
 
 async def start() -> None:
     bot = Bot(token=BOT_TOKEN)

@@ -18,7 +18,6 @@ class CreateNewListUseCase:
 class AddRemindTimeUseCase:
     def __init__(
         self,
-        user_service: UserService,
         scheduler: ReminderScheduler,
     ) -> None:
         self.scheduler = scheduler

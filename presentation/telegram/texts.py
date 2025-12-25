@@ -26,6 +26,9 @@ class ListView:
     list_deleted_success: str = "Список удалён ✅\n\n"
     action_canceled: str = "Действие отменено"
     delete_action_canceled: str = "Удаление отменено"
+    wanna_add_remind_for_this_list: str = (
+        "⏰ Хотите установить ежедневное напоминание для этого списка?"
+    )
 
     def list_created(self, list_title: str) -> str:
         return f"✅ Список '{list_title}' успешно создан"

@@ -1,7 +1,7 @@
 import contextlib
 from datetime import time
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -33,8 +33,6 @@ async def go_to_main_menu(callback: CallbackQuery) -> None:
         reply_markup=get_main_menu_keyboard(),
         parse_mode="Markdown",
     )
-
-    # Закрываем "часики" на кнопке
     await callback.answer()
 
 
@@ -55,7 +53,6 @@ async def show_lists_view(
             reply_markup=get_lists_keyboard(user.listoftasks),
         )
     except TelegramBadRequest:
-        # сообщение удалено — отправляем новое
         await callback.message.answer(
             text=text,
             parse_mode="Markdown",
@@ -67,8 +64,7 @@ async def show_lists_view(
 async def show_lists(callback: CallbackQuery, service: UserService) -> None:
     """Обработчик кнопки 'Посмотреть списки'."""
     await show_lists_view(callback=callback, service=service)
-
-    await callback.answer()  # обязательно закрываем "часики"
+    await callback.answer()
 
 
 async def remind_show_list(callback: CallbackQuery, service: UserService) -> None:
@@ -83,17 +79,12 @@ async def create_list(callback: CallbackQuery, state: FSMContext) -> None:
     sent_message = await callback.message.edit_text(
         list_view.list_name_prompt,
         reply_markup=get_cancel_keyboard("list"),
-    )  # просим ввести название
+    )
 
-    # сохраняем ID сообщения бота
     await state.update_data(prompt_message_id=sent_message.message_id)
+    await callback.answer()
 
-    await callback.answer()  # закрываем "часики"
 
-
-# -------------------------------
-# Message: пользователь вводит название списка
-# -------------------------------
 @router.message(ListStates.waiting_for_list_name)
 async def process_list_name(
     message: Message, state: FSMContext, service: UserService
@@ -108,12 +99,11 @@ async def process_list_name(
         )
         return
 
-    use_case = CreateNewListUseCase(user_service=service)
-    new_list_tasks = await use_case.execute(
+    new_list_tasks = await CreateNewListUseCase(user_service=service).execute(
         user_id=message.from_user.id,
         list_title=list_title,
     )
-    # ✅ сохраняем название + ID сообщения пользователя в FSM
+
     await state.update_data(
         list_title=list_title,
         user_message_id=message.message_id,
@@ -121,33 +111,11 @@ async def process_list_name(
     )
 
     await message.answer(
-        text="⏰ Хотите установить ежедневное напоминание для этого списка?",
+        text=list_view.wanna_add_remind_for_this_list,
         reply_markup=get_yes_no_keyboard(),
     )
 
     await state.set_state(ListStates.waiting_for_remind_decision)
-
-    # # Добавляем список через сервис
-    # service.add_list_of_tasks(message.from_user.id, title=list_title)
-    #
-    # await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
-    #
-    # # удаляем сообщение пользователя
-    # try:
-    #     await message.delete()
-    # except TelegramForbiddenError:
-    #     pass
-    #
-    # user = service.get_user_by_id(message.from_user.id)
-    # text = list_view.list_created(list_title=list_title) + "\n\n"
-    # text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
-    #
-    # await message.answer(text=text,
-    #                      parse_mode="Markdown",
-    #                      reply_markup=get_lists_keyboard(user.listoftasks))
-    #
-    # # Сбрасываем состояние
-    # await state.clear()
 
 
 @router.callback_query(
@@ -160,17 +128,14 @@ async def process_remind_decision(
     service: UserService,
 ) -> None:
     data = await state.get_data()
-    data["list_title"]
     user_message_id = data.get("user_message_id")
 
-    # 🔥 удаляем сообщение бота с просьбой ввести название
     await delete_fsm_prompt_message(
         state=state,
         bot=callback.bot,
         chat_id=callback.message.chat.id,
     )
 
-    # 🔥 удаляем сообщение пользователя с названием списка (✔️ корректно)
     if user_message_id:
         with contextlib.suppress(TelegramForbiddenError):
             await callback.bot.delete_message(
@@ -183,12 +148,10 @@ async def process_remind_decision(
         await state.clear()
         return
 
-    # если да — просим время
     edited_message = await callback.message.edit_text(
         text="Введите время напоминания в формате HH:MM (например 09:00)",
     )
 
-    # сохраняем id сообщения бота с просьбой ввести время
     await state.update_data(remind_prompt_message_id=edited_message.message_id)
 
     await state.set_state(ListStates.waiting_for_remind_time)
@@ -209,7 +172,6 @@ async def process_remind_time(
         return
 
     use_case = AddRemindTimeUseCase(
-        user_service=service,
         scheduler=reminder_scheduler,
     )
 
@@ -231,7 +193,6 @@ async def process_remind_time(
         remind_time=remind_time,
     )
 
-    # удаляем сообщение пользователя с временем
     with contextlib.suppress(TelegramForbiddenError):
         await message.delete()
 
@@ -330,7 +291,7 @@ async def cancel_delete_start(callback: CallbackQuery, service: UserService) -> 
     await callback.answer(text=list_view.delete_action_canceled)
 
 
-async def delete_fsm_prompt_message(state: FSMContext, bot, chat_id: int) -> None:
+async def delete_fsm_prompt_message(state: FSMContext, bot: Bot, chat_id: int) -> None:
     data = await state.get_data()
     prompt_message_id = data.get("prompt_message_id")
 
