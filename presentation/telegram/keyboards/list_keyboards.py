@@ -30,7 +30,7 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
                     text=l.title,
                     callback_data=f"list:select:{l.id}",
                 ),
-            ]
+            ],
         )
 
     # дополнительные кнопки
@@ -40,7 +40,7 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
                 text="➕ Добавить новый список",
                 callback_data="list:create",
             ),
-        ]
+        ],
     )
     keyboard.append(
         [
@@ -48,7 +48,7 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
                 text="🗑  Удалить список",
                 callback_data="list:delete",
             ),
-        ]
+        ],
     )
     keyboard.append(
         [
@@ -56,7 +56,7 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
                 text="⬅️ Назад в главное меню",
                 callback_data="menu:main",
             ),
-        ]
+        ],
     )
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
@@ -72,7 +72,7 @@ def get_lists_for_delete_keyboard(lists):
                     text=lst.title,
                     callback_data=f"list:confirm_delete:{lst.id}",
                 ),
-            ]
+            ],
         )
     keyboard.append(
         [
@@ -80,7 +80,7 @@ def get_lists_for_delete_keyboard(lists):
                 text="❌ Отмена",
                 callback_data="list:delete_cancel",
             ),
-        ]
+        ],
     )
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
@@ -91,10 +91,12 @@ def get_confirm_delete_keyboard(list_id):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="✅ Да", callback_data=f"list:delete_yes:{list_id}"
+                    text="✅ Да",
+                    callback_data=f"list:delete_yes:{list_id}",
                 ),
                 InlineKeyboardButton(
-                    text="❌ Нет", callback_data=f"list:delete_no:{list_id}"
+                    text="❌ Нет",
+                    callback_data=f"list:delete_no:{list_id}",
                 ),
             ],
         ],

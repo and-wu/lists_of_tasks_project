@@ -24,7 +24,8 @@ class SqliteUserRepository(IUserRepository):
     def get_by_id(self, user_id: int) -> User | None:
         with self._conn() as conn:
             row = conn.execute(
-                "SELECT id, name, username FROM users WHERE id = ?", (user_id,)
+                "SELECT id, name, username FROM users WHERE id = ?",
+                (user_id,),
             ).fetchone()
             return (
                 User.from_dict(
@@ -40,7 +41,8 @@ class SqliteUserRepository(IUserRepository):
     def get_by_username(self, username: str) -> User | None:
         with self._conn() as conn:
             row = conn.execute(
-                "SELECT id, name, username FROM users WHERE username = ?", (username,)
+                "SELECT id, name, username FROM users WHERE username = ?",
+                (username,),
             ).fetchone()
             return (
                 User.from_dict(

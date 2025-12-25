@@ -8,8 +8,9 @@ def get_extra_task_buttons(list_id) -> list[list[InlineKeyboardButton]]:
     return [
         [
             InlineKeyboardButton(
-                text="➕ Добавить новую задачу", callback_data=f"task:create:{list_id}"
-            )
+                text="➕ Добавить новую задачу",
+                callback_data=f"task:create:{list_id}",
+            ),
         ],
         [InlineKeyboardButton(text="⬅️ Назад к спискам", callback_data="lists:show")],
     ]
@@ -29,7 +30,7 @@ def get_tasks_keyboard(tasks, list_id) -> InlineKeyboardMarkup:
                     text=f"✅ {task.value}" if task.completed else f"⬜️ {task.value}",
                     callback_data=f"task:select:{task.id}",
                 ),
-            ]
+            ],
         )
 
     # добавляем дополнительные кнопки
@@ -48,7 +49,7 @@ def get_task_detail_keyboard(task: Task, list_id: int) -> InlineKeyboardMarkup:
                 text=f"✅ {task.value}" if task.completed else f"⬜️ {task.value}",
                 callback_data=f"task:toggle:{task.id}",
             ),
-        ]
+        ],
     )
 
     # 2️⃣ Кнопка редактирования
@@ -58,7 +59,7 @@ def get_task_detail_keyboard(task: Task, list_id: int) -> InlineKeyboardMarkup:
                 text="✏️ Изменить текст задачи",
                 callback_data=f"task:edit:{task.id}",
             ),
-        ]
+        ],
     )
 
     # 3️⃣ Удаление
@@ -68,7 +69,7 @@ def get_task_detail_keyboard(task: Task, list_id: int) -> InlineKeyboardMarkup:
                 text="🗑 Удалить задачу",
                 callback_data=f"task:delete:{task.id}",
             ),
-        ]
+        ],
     )
 
     # 4️⃣ Назад к списку задач
@@ -78,14 +79,15 @@ def get_task_detail_keyboard(task: Task, list_id: int) -> InlineKeyboardMarkup:
                 text="⬅️ К списку задач",
                 callback_data=f"tasks:back:{list_id}",
             ),
-        ]
+        ],
     )
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
 def get_confirm_delete_task_keyboard(
-    task_id: int, list_id: int
+    task_id: int,
+    list_id: int,
 ) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

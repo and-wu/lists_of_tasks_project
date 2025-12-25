@@ -65,7 +65,7 @@ class CLI:
                 for user in users:
                     pass
                 user_id = input(
-                    "введите число соответсвующее имени для выбора пользователя: "
+                    "введите число соответсвующее имени для выбора пользователя: ",
                 ).strip()
 
                 try:
@@ -98,9 +98,9 @@ class CLI:
     def create_lists_of_tasks(self) -> None:
         title = input("Введите название для списка задач - ")
         list_of_tasks = self.user_service.add_list_of_tasks(
-            user_id=self._current_user_id, title=title
+            user_id=self._current_user_id,
+            title=title,
         )
-
 
         while True:
             choice = input("Выберите действие: ").strip()

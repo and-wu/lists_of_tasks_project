@@ -87,7 +87,9 @@ async def create_list(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(ListStates.waiting_for_list_name)
 async def process_list_name(
-    message: Message, state: FSMContext, service: UserService
+    message: Message,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     """Обрабатывает текст пользователя, создаёт новый список и сбрасывает состояние."""
     list_title = message.text.strip()

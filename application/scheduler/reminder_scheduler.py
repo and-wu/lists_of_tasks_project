@@ -10,7 +10,10 @@ from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard
 
 
 async def send_list_reminder(
-    bot: Bot, user_id: int, list_id: int, service: UserService
+    bot: Bot,
+    user_id: int,
+    list_id: int,
+    service: UserService,
 ) -> None:
     """Отправляет напоминание о конкретном списке задач пользователя.
 
@@ -44,14 +47,20 @@ async def send_list_reminder(
 
 class ReminderScheduler:
     def __init__(
-        self, scheduler: AsyncIOScheduler, bot: Bot, service: UserService
+        self,
+        scheduler: AsyncIOScheduler,
+        bot: Bot,
+        service: UserService,
     ) -> None:
         self.scheduler = scheduler
         self.bot = bot
         self.service = service
 
     def schedule_list_reminder(
-        self, user_id: int, list_id: int, remind_time: time
+        self,
+        user_id: int,
+        list_id: int,
+        remind_time: time,
     ) -> None:
         job_id = f"list_{user_id}_{list_id}"
 

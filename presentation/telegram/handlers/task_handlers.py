@@ -62,7 +62,8 @@ async def create_task(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(TaskStates.waiting_for_task_text)  # ставим состояние
 
     sent_message = await callback.message.edit_text(
-        task_view.task_name_prompt, reply_markup=get_cancel_keyboard("task")
+        task_view.task_name_prompt,
+        reply_markup=get_cancel_keyboard("task"),
     )  # просим ввести текст задачи
 
     # сохраняем ID сообщения бота
@@ -73,13 +74,16 @@ async def create_task(callback: CallbackQuery, state: FSMContext) -> None:
 
 @router.message(TaskStates.waiting_for_task_text)
 async def process_task_text(
-    message: Message, state: FSMContext, service: UserService
+    message: Message,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     task_text = message.text.strip()
 
     if not task_text:
         await message.answer(
-            task_view.task_name_empty, reply_markup=get_cancel_keyboard("task")
+            task_view.task_name_empty,
+            reply_markup=get_cancel_keyboard("task"),
         )
         return
 
@@ -95,7 +99,9 @@ async def process_task_text(
     )
 
     await delete_fsm_prompt_message(
-        state=state, bot=message.bot, chat_id=message.chat.id
+        state=state,
+        bot=message.bot,
+        chat_id=message.chat.id,
     )
 
     # удаляем сообщение пользователя
@@ -119,7 +125,9 @@ async def process_task_text(
 
 @router.callback_query(F.data == "task:cancel")
 async def cancel_action_create(
-    callback: CallbackQuery, state: FSMContext, service: UserService
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     """Отмена текущего действия (FSM)."""
     # достаём сохранённые данные
@@ -163,7 +171,9 @@ async def select_task(callback: CallbackQuery, service: UserService) -> None:
 
 @router.callback_query(F.data.startswith("task:edit:"))
 async def edit_task(
-    callback: CallbackQuery, state: FSMContext, service: UserService
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
@@ -188,7 +198,9 @@ async def edit_task(
 
 @router.message(TaskStates.waiting_for_new_task_text)
 async def process_new_task_text(
-    message: Message, state: FSMContext, service: UserService
+    message: Message,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     new_text = message.text.strip()
 
@@ -208,7 +220,8 @@ async def process_new_task_text(
     if prompt_message_id:
         try:
             await message.bot.delete_message(
-                chat_id=message.chat.id, message_id=prompt_message_id
+                chat_id=message.chat.id,
+                message_id=prompt_message_id,
             )
             # await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
         except:
@@ -261,7 +274,9 @@ async def back_to_tasks(callback: CallbackQuery, service: UserService) -> None:
 
 @router.callback_query(F.data == "task_text:cancel")
 async def cancel_action_edit_task(
-    callback: CallbackQuery, state: FSMContext, service: UserService
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
 ) -> None:
     """Отмена текущего действия (FSM)."""
     # достаём сохранённые данные
