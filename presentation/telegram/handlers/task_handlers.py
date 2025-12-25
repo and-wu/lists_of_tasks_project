@@ -25,6 +25,7 @@ task_view = TaskView()
 
 @router.callback_query(F.data.startswith("list:select"))
 async def show_tasks(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик для отображения задач."""
     _, _action, list_id = callback.data.split(":")
 
     user_id = callback.from_user.id
@@ -52,23 +53,17 @@ async def show_tasks(callback: CallbackQuery, service: UserService) -> None:
 
 @router.callback_query(F.data.startswith("task:create"))
 async def create_task(callback: CallbackQuery, state: FSMContext) -> None:
+    """Обработчик для старта создания новой задачи."""
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
-
-    # сохраняем id списка в состоянии
-    await state.update_data(list_id=list_id)
-
-    # ставим состояние ожидания текста задачи
-    await state.set_state(TaskStates.waiting_for_task_text)  # ставим состояние
 
     sent_message = await callback.message.edit_text(
         task_view.task_name_prompt,
         reply_markup=get_cancel_keyboard("task"),
-    )  # просим ввести текст задачи
+    )
 
-    # сохраняем ID сообщения бота
-    await state.update_data(prompt_message_id=sent_message.message_id)
-
+    await state.set_state(TaskStates.waiting_for_task_text)
+    await state.update_data(list_id=list_id, prompt_message_id=sent_message.message_id)
     await callback.answer()
 
 
@@ -78,6 +73,7 @@ async def process_task_text(
     state: FSMContext,
     service: UserService,
 ) -> None:
+    """Обработчик для заголовка новой задачи."""
     task_text = message.text.strip()
 
     if not task_text:
@@ -87,11 +83,10 @@ async def process_task_text(
         )
         return
 
-    # достаём сохранённые данные
     data = await state.get_data()
     list_id = data["list_id"]
 
-    # создаём задачу
+    # 3 TODO(arhipov.om): Вынести в UseCase.
     task = service.add_task(
         user_id=message.from_user.id,
         list_id=list_id,
@@ -104,11 +99,9 @@ async def process_task_text(
         chat_id=message.chat.id,
     )
 
-    # удаляем сообщение пользователя
     with contextlib.suppress(TelegramForbiddenError):
         await message.delete()
-
-    await state.clear()  # очищаем состояние
+    await state.clear()
 
     task_list = service.get_list_by_id(user_id=message.from_user.id, list_id=list_id)
     tasks = service.get_tasks(user_id=message.from_user.id, list_of_tasks_id=list_id)
@@ -130,11 +123,9 @@ async def cancel_action_create(
     service: UserService,
 ) -> None:
     """Отмена текущего действия (FSM)."""
-    # достаём сохранённые данные
     data = await state.get_data()
     list_id = data.get("list_id")
 
-    # очищаем состояние
     await state.clear()
 
     user_id = callback.from_user.id
@@ -155,6 +146,7 @@ async def cancel_action_create(
 
 @router.callback_query(F.data.startswith("task:select"))
 async def select_task(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик выбора задачи."""
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -175,6 +167,7 @@ async def edit_task(
     state: FSMContext,
     service: UserService,
 ) -> None:
+    """Обработчик редактирования задачи."""
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -202,6 +195,7 @@ async def process_new_task_text(
     state: FSMContext,
     service: UserService,
 ) -> None:
+    """Обработчик создания новой задачи."""
     new_text = message.text.strip()
 
     if not new_text:
@@ -215,17 +209,13 @@ async def process_new_task_text(
     task_id = data["task_id"]
     list_id = data["list_id"]
 
-    # удаляем сообщение с приглашением к вводу
     prompt_message_id = data.get("prompt_message_id")
     if prompt_message_id:
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await message.bot.delete_message(
                 chat_id=message.chat.id,
                 message_id=prompt_message_id,
             )
-            # await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
-        except:
-            pass
 
     # удаляем сообщение пользователя
     with contextlib.suppress(builtins.BaseException):
@@ -250,6 +240,7 @@ async def process_new_task_text(
 
 @router.callback_query(F.data.startswith("tasks:back:"))
 async def back_to_tasks(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик перехода назад к списку списков задач."""
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
 
@@ -279,11 +270,9 @@ async def cancel_action_edit_task(
     service: UserService,
 ) -> None:
     """Отмена текущего действия (FSM)."""
-    # достаём сохранённые данные
     data = await state.get_data()
     task_id = data["task_id"]
 
-    # очищаем состояние
     await state.clear()
 
     task, list_id = service.get_task_with_list(callback.from_user.id, task_id)
@@ -299,29 +288,28 @@ async def cancel_action_edit_task(
 
 @router.callback_query(F.data.startswith("task:toggle:"))
 async def toggle_task_completed(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик переключению статуса задачи."""
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
     user_id = callback.from_user.id
-
-    # получаем задачу и список, в котором она лежит
     task, list_id = service.get_task_with_list(user_id, task_id)
-
-    # переключаем статус
     task = service.toggle_task_completed(user_id, task_id)
 
     text = task_view.task_text(task)
-
     await callback.message.edit_text(
         text=text,
         reply_markup=get_task_detail_keyboard(task, list_id),
     )
-
     await callback.answer(text=task_view.status_updated_success)
 
 
 @router.callback_query(F.data.startswith("task:delete:"))
 async def delete_task(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик удаления задачи.
+
+    Вызывает контекстное окно "Да/Нет".
+    """
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -339,6 +327,7 @@ async def delete_task(callback: CallbackQuery, service: UserService) -> None:
 
 @router.callback_query(F.data.startswith("tasks:delete:yes:"))
 async def delete_task_yes(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик подтверждения удаления задачи."""
     parts = callback.data.split(":")
     task_id = int(parts[-2])
     list_id = int(parts[-1])
@@ -366,6 +355,7 @@ async def delete_task_yes(callback: CallbackQuery, service: UserService) -> None
 
 @router.callback_query(F.data.startswith("tasks:delete:no:"))
 async def delete_task_no(callback: CallbackQuery, service: UserService) -> None:
+    """Обработчик отмены удаления задачи."""
     parts = callback.data.split(":")
     task_id = int(parts[-2])
     list_id = int(parts[-1])
@@ -375,8 +365,9 @@ async def delete_task_no(callback: CallbackQuery, service: UserService) -> None:
         task_id=task_id,
     )
 
-    await callback.message.edit_text(text=task_view.task_text(task),
-                                     reply_markup=get_task_detail_keyboard(task, list_id),
-                                     )
+    await callback.message.edit_text(
+        text=task_view.task_text(task),
+        reply_markup=get_task_detail_keyboard(task, list_id),
+                             )
 
     await callback.answer(text=task_view.delete_action_canceled)

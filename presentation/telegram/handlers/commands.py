@@ -14,6 +14,7 @@ bot_messages = BotMessages()
 
 @commands_router.message(CommandStart())
 async def cmd_start(message: Message, service: UserService) -> None:
+    """Обработчик для команды /start."""
     with contextlib.suppress(Exception):
         service.create_user(
             user_id=message.from_user.id,
