@@ -1,4 +1,6 @@
 
+import contextlib
+
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message
@@ -15,12 +17,10 @@ bot_messages = BotMessages()
 # ==============================
 
 @commands_router.message(CommandStart())
-async def cmd_start(message: Message, service: UserService):
-    try:
+async def cmd_start(message: Message, service: UserService) -> None:
+    with contextlib.suppress(Exception):
         service.create_user(user_id=message.from_user.id, name=message.from_user.first_name,
                             username=message.from_user.username)
-    except Exception as e:
-        print(e)
 
     text = (
             bot_messages.say_hello(username=message.from_user.first_name)
@@ -31,5 +31,5 @@ async def cmd_start(message: Message, service: UserService):
     await message.answer(
         text,
         reply_markup=get_main_menu_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )

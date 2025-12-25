@@ -6,7 +6,7 @@ from domain.task_list import ListOfTasks
 
 
 class CreateNewListUseCase:
-    def __init__(self, user_service: UserService):
+    def __init__(self, user_service: UserService) -> None:
         self.user_service = user_service
 
     async def execute(self, user_id: int, list_title: str) -> ListOfTasks:
@@ -18,7 +18,7 @@ class AddRemindTimeUseCase:
         self,
         user_service: UserService,
         scheduler: ReminderScheduler,
-    ):
+    ) -> None:
         self.scheduler = scheduler
 
     async def execute(self, user_id: int, list_id: int, remind_time: time) -> None:

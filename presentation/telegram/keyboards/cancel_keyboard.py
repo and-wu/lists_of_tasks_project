@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 def get_cancel_keyboard(entity: str) -> InlineKeyboardMarkup:
@@ -7,8 +7,8 @@ def get_cancel_keyboard(entity: str) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="❌ Отмена",
-                    callback_data=f"{entity}:cancel"
-                )
-            ]
-        ]
+                    callback_data=f"{entity}:cancel",
+                ),
+            ],
+        ],
     )

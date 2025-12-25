@@ -1,5 +1,3 @@
-import json
-from domain.users import User
 
 import sqlite3
 from contextlib import contextmanager
@@ -7,7 +5,7 @@ from pathlib import Path
 
 
 class DataBase:
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         self.path = path
 
     @contextmanager
@@ -20,7 +18,7 @@ class DataBase:
         finally:
             conn.close()
 
-    def create_tasks_table(self):
+    def create_tasks_table(self) -> None:
         with self.get_cursor() as cursor:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS tasks (
@@ -34,7 +32,7 @@ class DataBase:
                 )
             """)
 
-    def get_database(path: Path) -> DataBase:
-        return DataBase(path.as_posix())
+    def get_database(self: Path) -> DataBase:
+        return DataBase(self.as_posix())
 
 

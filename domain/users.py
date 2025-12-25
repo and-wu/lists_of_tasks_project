@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 
 from domain.task_list import ListOfTasks
 
-
 # =============================================
 # Модель
 # =============================================
@@ -15,9 +14,10 @@ class User:
     username: str
     listoftasks: list[ListOfTasks] = field(default_factory=list)
 
-    def rename(self, new_name: str):
+    def rename(self, new_name: str) -> None:
         if len(new_name) < 2:
-            raise ValueError("Name is too short")
+            msg = "Name is too short"
+            raise ValueError(msg)
         self.name = new_name
 
 

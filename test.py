@@ -1,8 +1,6 @@
 @router.callback_query(F.data == "task:cancel")
-async def cancel_action(callback: CallbackQuery, state: FSMContext, service: UserService):
-    """
-    Отмена текущего действия (FSM)
-    """
+async def cancel_action(callback: CallbackQuery, state: FSMContext, service: UserService) -> None:
+    """Отмена текущего действия (FSM)."""
     # достаём сохранённые данные
     data = await state.get_data()
     list_id = data.get("list_id")
@@ -23,10 +21,8 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
 
 
 @router.callback_query(F.data == "task_text:cancel")
-async def cancel_action(callback: CallbackQuery, state: FSMContext, service: UserService):
-    """
-    Отмена текущего действия (FSM)
-    """
+async def cancel_action(callback: CallbackQuery, state: FSMContext, service: UserService) -> None:
+    """Отмена текущего действия (FSM)."""
     # достаём сохранённые данные
     data = await state.get_data()
     task_id = data["task_id"]
@@ -41,6 +37,6 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
 
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_task_detail_keyboard(task, list_id)
+        reply_markup=get_task_detail_keyboard(task, list_id),
     )
     await callback.answer()

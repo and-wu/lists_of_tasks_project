@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import time, datetime
+from datetime import datetime, time
 
 from domain.tasks import Task
 
@@ -22,10 +22,10 @@ class ListOfTasks:
         self.tasks.append(task)
         return task
 
-    def remove_task_from_list(self, task_for_remove: Task):
+    def remove_task_from_list(self, task_for_remove: Task) -> None:
         self.tasks = [task for task in self.tasks if task.id != task_for_remove.id]
 
-    def clear(self):
+    def clear(self) -> None:
         self.tasks.clear()
 
     def get_task(self, task_id: int) -> Task | None:

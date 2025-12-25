@@ -1,4 +1,3 @@
-from aiogram.types import Message
 from dataclasses import dataclass
 
 from domain.tasks import Task
@@ -71,7 +70,7 @@ class TaskView:
     def confirm_delete_task(self, task_value: str) -> str:
         return f"❗ Точно удалить задачу?\n\n«{task_value}»"
 
-    def task_new_text_prompt(self, task):
+    def task_new_text_prompt(self, task) -> str:
         return (
         f"✏️ <b>Редактирование задачи</b>\n\n"
         f"<b>Текущий текст:</b>\n"

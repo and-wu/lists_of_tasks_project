@@ -1,4 +1,7 @@
-from aiogram import Router, F
+import builtins
+import contextlib
+
+from aiogram import F, Router
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -6,18 +9,22 @@ from aiogram.types import CallbackQuery, Message
 from application.user.create_user import UserService
 from presentation.telegram.handlers.list_handlers import delete_fsm_prompt_message
 from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
+from presentation.telegram.keyboards.task_keyboards import (
+    extra_task_menu,
+    get_confirm_delete_task_keyboard,
+    get_task_detail_keyboard,
+    get_tasks_keyboard,
+)
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView
-from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard, extra_task_menu, \
-    get_task_detail_keyboard, get_confirm_delete_task_keyboard
 
 router = Router()
 
 task_view = TaskView()
 
 @router.callback_query(F.data.startswith("list:select"))
-async def show_tasks(callback: CallbackQuery, service: UserService):
-    _, action, list_id = callback.data.split(":")
+async def show_tasks(callback: CallbackQuery, service: UserService) -> None:
+    _, _action, list_id = callback.data.split(":")
 
     user_id = callback.from_user.id
     list_id = int(list_id)
@@ -42,7 +49,7 @@ async def show_tasks(callback: CallbackQuery, service: UserService):
 
 
 @router.callback_query(F.data.startswith("task:create"))
-async def create_task(callback: CallbackQuery, state: FSMContext):
+async def create_task(callback: CallbackQuery, state: FSMContext) -> None:
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
 
@@ -63,7 +70,7 @@ async def create_task(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 @router.message(TaskStates.waiting_for_task_text)
-async def process_task_text(message: Message, state: FSMContext, service: UserService):
+async def process_task_text(message: Message, state: FSMContext, service: UserService) -> None:
     task_text = message.text.strip()
 
     if not task_text:
@@ -78,16 +85,14 @@ async def process_task_text(message: Message, state: FSMContext, service: UserSe
     # создаём задачу
     task = service.add_task(user_id=message.from_user.id,
                             list_id=list_id,
-                            value=task_text
+                            value=task_text,
                             )
 
     await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
 
     # удаляем сообщение пользователя
-    try:
+    with contextlib.suppress(TelegramForbiddenError):
         await message.delete()
-    except TelegramForbiddenError:
-        pass
 
     await state.clear()  # очищаем состояние
 
@@ -104,10 +109,8 @@ async def process_task_text(message: Message, state: FSMContext, service: UserSe
 
 
 @router.callback_query(F.data == "task:cancel")
-async def cancel_action_create(callback: CallbackQuery, state: FSMContext, service: UserService):
-    """
-    Отмена текущего действия (FSM)
-    """
+async def cancel_action_create(callback: CallbackQuery, state: FSMContext, service: UserService) -> None:
+    """Отмена текущего действия (FSM)."""
     # достаём сохранённые данные
     data = await state.get_data()
     list_id = data.get("list_id")
@@ -130,7 +133,7 @@ async def cancel_action_create(callback: CallbackQuery, state: FSMContext, servi
 
 
 @router.callback_query(F.data.startswith("task:select"))
-async def select_task(callback: CallbackQuery, service: UserService):
+async def select_task(callback: CallbackQuery, service: UserService) -> None:
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -140,13 +143,13 @@ async def select_task(callback: CallbackQuery, service: UserService):
 
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_task_detail_keyboard(task, list_id)
+        reply_markup=get_task_detail_keyboard(task, list_id),
     )
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("task:edit:"))
-async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserService):
+async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserService) -> None:
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -159,7 +162,7 @@ async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserSer
 
     sent_message = await callback.message.edit_text(text=text,
                                      parse_mode="HTML",
-                                     reply_markup=get_cancel_keyboard("task_text")
+                                     reply_markup=get_cancel_keyboard("task_text"),
                                      )
     # сохраняем ID сообщения в FSM, чтобы потом удалить
     await state.update_data(prompt_message_id=sent_message.message_id)
@@ -167,13 +170,13 @@ async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserSer
     await callback.answer()
 
 @router.message(TaskStates.waiting_for_new_task_text)
-async def process_new_task_text(message: Message,state: FSMContext,service: UserService):
+async def process_new_task_text(message: Message,state: FSMContext,service: UserService) -> None:
     new_text = message.text.strip()
 
     if not new_text:
         await message.answer(
             text=task_view.task_name_empty,
-            reply_markup=get_cancel_keyboard("task_text")
+            reply_markup=get_cancel_keyboard("task_text"),
         )
         return
 
@@ -191,16 +194,14 @@ async def process_new_task_text(message: Message,state: FSMContext,service: User
             pass
 
     # удаляем сообщение пользователя
-    try:
+    with contextlib.suppress(builtins.BaseException):
         await message.delete()
-    except:
-        pass
 
     # обновляем задачу
     task = service.update_task_text(
         user_id=message.from_user.id,
         task_id=task_id,
-        new_value=new_text
+        new_value=new_text,
     )
 
     await state.clear()
@@ -209,12 +210,12 @@ async def process_new_task_text(message: Message,state: FSMContext,service: User
 
     await message.answer(
         text=text,
-        reply_markup=get_task_detail_keyboard(task, list_id)
+        reply_markup=get_task_detail_keyboard(task, list_id),
     )
 
 
 @router.callback_query(F.data.startswith("tasks:back:"))
-async def back_to_tasks(callback: CallbackQuery, service: UserService):
+async def back_to_tasks(callback: CallbackQuery, service: UserService) -> None:
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
 
@@ -231,17 +232,15 @@ async def back_to_tasks(callback: CallbackQuery, service: UserService):
     await callback.message.edit_text(
         text=task_view.get_list_title(task_list.title),
         parse_mode="Markdown",
-        reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id)
+        reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id),
     )
 
     await callback.answer()
 
 
 @router.callback_query(F.data == "task_text:cancel")
-async def cancel_action_edit_task(callback: CallbackQuery, state: FSMContext, service: UserService):
-    """
-    Отмена текущего действия (FSM)
-    """
+async def cancel_action_edit_task(callback: CallbackQuery, state: FSMContext, service: UserService) -> None:
+    """Отмена текущего действия (FSM)."""
     # достаём сохранённые данные
     data = await state.get_data()
     task_id = data["task_id"]
@@ -256,12 +255,12 @@ async def cancel_action_edit_task(callback: CallbackQuery, state: FSMContext, se
 
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_task_detail_keyboard(task, list_id)
+        reply_markup=get_task_detail_keyboard(task, list_id),
     )
     await callback.answer()
 
 @router.callback_query(F.data.startswith("task:toggle:"))
-async def toggle_task_completed(callback: CallbackQuery, service: UserService):
+async def toggle_task_completed(callback: CallbackQuery, service: UserService) -> None:
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -277,29 +276,29 @@ async def toggle_task_completed(callback: CallbackQuery, service: UserService):
 
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_task_detail_keyboard(task, list_id)
+        reply_markup=get_task_detail_keyboard(task, list_id),
     )
 
     await callback.answer(text=task_view.status_updated_success)
 
 @router.callback_query(F.data.startswith("task:delete:"))
-async def delete_task(callback: CallbackQuery, service: UserService):
+async def delete_task(callback: CallbackQuery, service: UserService) -> None:
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
     task, list_id = service.get_task_with_list(
         callback.from_user.id,
-        task_id
+        task_id,
     )
 
     await callback.message.edit_text(
         text=task_view.confirm_delete_task(task.value),
-        reply_markup=get_confirm_delete_task_keyboard(task_id, list_id)
+        reply_markup=get_confirm_delete_task_keyboard(task_id, list_id),
     )
     await callback.answer()
 
 @router.callback_query(F.data.startswith("tasks:delete:yes:"))
-async def delete_task_yes(callback: CallbackQuery, service: UserService):
+async def delete_task_yes(callback: CallbackQuery, service: UserService) -> None:
     parts = callback.data.split(":")
     task_id = int(parts[-2])
     list_id = int(parts[-1])
@@ -314,23 +313,23 @@ async def delete_task_yes(callback: CallbackQuery, service: UserService):
 
     await callback.message.edit_text(text=text,
                                      parse_mode="Markdown",
-                                     reply_markup=get_tasks_keyboard(tasks, list_id)
+                                     reply_markup=get_tasks_keyboard(tasks, list_id),
                                      )
 
     await callback.answer(text=task_view.task_delete_success)
 
 @router.callback_query(F.data.startswith("tasks:delete:no:"))
-async def delete_task_no(callback: CallbackQuery, service: UserService):
+async def delete_task_no(callback: CallbackQuery, service: UserService) -> None:
     parts = callback.data.split(":")
     task_id = int(parts[-2])
     list_id = int(parts[-1])
 
     task, _ = service.get_task_with_list(user_id=callback.from_user.id,
-                                         task_id=task_id
+                                         task_id=task_id,
                                          )
 
     await callback.message.edit_text(text=task_view.task_text(task),
-                                     reply_markup=get_task_detail_keyboard(task, list_id)
+                                     reply_markup=get_task_detail_keyboard(task, list_id),
                                      )
 
     await callback.answer(text=task_view.delete_action_canceled)

@@ -8,3 +8,13 @@ dependencies = [
     "apscheduler>=3.11.2",
     "dotenv>=0.9.9",
 ]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["RUF001", "RUF002", "D100", "D101", "D102", "D104", "D107"]
+exclude = ["tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false

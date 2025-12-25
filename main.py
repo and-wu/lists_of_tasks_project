@@ -1,27 +1,25 @@
 import asyncio
+import contextlib
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.storage.memory import MemoryStorage
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.user.create_user import UserService
-from infra.factory import create_repository, DBType
-
 from config_data.config import BOT_TOKEN
+from infra.factory import DBType, create_repository
 from presentation.telegram.handlers.commands import commands_router
 from presentation.telegram.handlers.list_handlers import router as list_callbacks_router
 from presentation.telegram.handlers.task_handlers import router as task_callbacks_router
 
 TOKEN = "YOUR_BOT_TOKEN"
 
-async def start():
+async def start() -> None:
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
 
@@ -38,7 +36,7 @@ async def start():
     reminder_scheduler = ReminderScheduler(
         scheduler=scheduler,
         bot=bot,
-        service=service
+        service=service,
     )
 
     # ❗ Кладём в dp (чтобы доставать в хэндлерах)
@@ -56,22 +54,18 @@ async def start():
         logging.warning(f"Ошибка при удалении вебхука: {e}")
 
     try:
-        me = await bot.me()
-        print(f"Бот запущен: @{me.username} (id: {me.id})")
-        print("Polling запущен...")
+        await bot.me()
         await dp.start_polling(bot, service=service)
     except Exception as e:
-        logging.error(f"Не удалось запустить бота: {e}")
+        logging.exception(f"Не удалось запустить бота: {e}")
         sys.exit(1)
     finally:
         await bot.session.close()
 
 
 if __name__ == "__main__":
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(start())
-    except KeyboardInterrupt:
-        print("Бот остановлен вручную")
 
 
 
