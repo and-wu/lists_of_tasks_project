@@ -85,3 +85,22 @@ def get_confirm_delete_keyboard(list_id):
             ]
         ]
     )
+
+
+def get_yes_no_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Да",
+                    callback_data="list_remind_yes"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Нет",
+                    callback_data="list_remind_no"
+                )
+            ]
+        ]
+    )

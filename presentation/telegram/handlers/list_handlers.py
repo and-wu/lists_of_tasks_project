@@ -1,16 +1,17 @@
-from asyncio.log import logger
+from datetime import time
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.user.create_user import UserService
 from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
 from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.texts import ListView
 from presentation.telegram.keyboards.list_keyboards import get_main_menu_keyboard, get_lists_keyboard, \
-    get_lists_for_delete_keyboard, get_confirm_delete_keyboard
+    get_lists_for_delete_keyboard, get_confirm_delete_keyboard, get_yes_no_keyboard
 
 router = Router()
 
@@ -62,6 +63,12 @@ async def show_lists(callback: CallbackQuery, service: UserService):
 
     await callback.answer()  # обязательно закрываем "часики"
 
+async def remind_show_list(callback: CallbackQuery, service: UserService):
+    """
+    Запускается в нужное время как напоминание
+    """
+    await show_lists_view(callback=callback, service=service)
+
 
 @router.callback_query(F.data == "list:create")
 async def create_list(callback: CallbackQuery, state: FSMContext):
@@ -95,28 +102,140 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
                              )
         return
 
-    # Добавляем список через сервис
-    service.add_list_of_tasks(message.from_user.id, title=list_title)
 
-    await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
+    # ✅ сохраняем название + ID сообщения пользователя в FSM
+    await state.update_data(
+        list_title=list_title,
+        user_message_id=message.message_id
+    )
 
-    # удаляем сообщение пользователя
+    await message.answer(
+        text="⏰ Хотите установить ежедневное напоминание для этого списка?",
+        reply_markup=get_yes_no_keyboard()
+    )
+
+    await state.set_state(ListStates.waiting_for_remind_decision)
+
+    # # Добавляем список через сервис
+    # service.add_list_of_tasks(message.from_user.id, title=list_title)
+    #
+    # await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
+    #
+    # # удаляем сообщение пользователя
+    # try:
+    #     await message.delete()
+    # except TelegramForbiddenError:
+    #     pass
+    #
+    # user = service.get_user_by_id(message.from_user.id)
+    # text = list_view.list_created(list_title=list_title) + "\n\n"
+    # text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
+    #
+    # await message.answer(text=text,
+    #                      parse_mode="Markdown",
+    #                      reply_markup=get_lists_keyboard(user.listoftasks))
+    #
+    # # Сбрасываем состояние
+    # await state.clear()
+
+@router.callback_query(ListStates.waiting_for_remind_decision, F.data.in_(["list_remind_yes", "list_remind_no"]))
+async def process_remind_decision(callback: CallbackQuery, state: FSMContext, service: UserService):
+    data = await state.get_data()
+    list_title = data["list_title"]
+    user_message_id = data.get("user_message_id")
+
+    # 🔥 удаляем сообщение бота с просьбой ввести название
+    await delete_fsm_prompt_message(state=state, bot=callback.bot, chat_id=callback.message.chat.id)
+
+    # 🔥 удаляем сообщение пользователя с названием списка (✔️ корректно)
+    if user_message_id:
+        try:
+            await callback.bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=user_message_id
+            )
+        except TelegramForbiddenError:
+            pass
+
+    if callback.data == "list_remind_no":
+        # создаём список без напоминания
+        service.add_list_of_tasks(callback.from_user.id, title=list_title, remind_time=None)
+
+        await callback.message.edit_text(
+            text=f"✅ Список *{list_title}* создан без напоминаний"
+        )
+
+        await show_lists_view(callback=callback, service=service)
+
+        await state.clear()
+        return
+
+    # если да — просим время
+    edited_message = await callback.message.edit_text(
+        text="Введите время напоминания в формате HH:MM (например 09:00)"
+    )
+
+    # сохраняем id сообщения бота с просьбой ввести время
+    await state.update_data(remind_prompt_message_id=edited_message.message_id)
+
+    await state.set_state(ListStates.waiting_for_remind_time)
+
+@router.message(ListStates.waiting_for_remind_time)
+async def process_remind_time(message: Message, state: FSMContext,
+                              service: UserService, reminder_scheduler: ReminderScheduler):
+    try:
+        hours, minutes = map(int, message.text.split(":"))
+        remind_time = time(hour=hours, minute=minutes)
+    except Exception:
+        await message.answer("❌ Неверный формат. Введите время как HH:MM")
+        return
+
+    data = await state.get_data()
+    list_title = data["list_title"]
+    remind_prompt_message_id = data.get("remind_prompt_message_id")
+
+    if remind_prompt_message_id:
+        try:
+            await message.bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=remind_prompt_message_id
+            )
+        except TelegramForbiddenError:
+            pass
+
+    list_of_tasks = service.add_list_of_tasks(
+        user_id=message.from_user.id,
+        title=list_title,
+        remind_time=remind_time
+    )
+
+    # сохраняем время в домене
+    #list_of_tasks.remind_time = remind_time
+    #service.save_user(message.from_user.id)
+
+    if list_of_tasks.remind_time:
+        reminder_scheduler.schedule_list_reminder(
+            user_id=message.from_user.id,
+            list_id=list_of_tasks.id,
+            remind_time=list_of_tasks.remind_time
+        )
+
+    # удаляем сообщение пользователя с временем
     try:
         await message.delete()
     except TelegramForbiddenError:
         pass
 
+
     user = service.get_user_by_id(message.from_user.id)
-    text = list_view.list_created(list_title=list_title) + "\n\n"
+    text = list_view.list_created(list_title=list_title) + "\n" + f"⏰ Напоминание: {remind_time.strftime('%H:%M')}\n\n"
     text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
 
     await message.answer(text=text,
                          parse_mode="Markdown",
                          reply_markup=get_lists_keyboard(user.listoftasks))
 
-    # Сбрасываем состояние
     await state.clear()
-
 
 @router.callback_query(F.data == "list:cancel")
 async def cancel_action(callback: CallbackQuery, state: FSMContext, service: UserService):

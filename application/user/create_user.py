@@ -1,3 +1,4 @@
+from datetime import time
 from typing import Optional
 
 from domain.task_list import ListOfTasks
@@ -27,13 +28,13 @@ class UserService:
         return user
 
 
-    def add_list_of_tasks(self, user_id: int, title) -> ListOfTasks:
+    def add_list_of_tasks(self, user_id: int, title, remind_time: None | time) -> ListOfTasks:
         user = self.repo.get_by_id(user_id)
         max_id = 0
         for list_tasks in user.listoftasks:
             max_id = max(list_tasks.id, max_id) + 1
 
-        list_of_tasks = ListOfTasks(max_id, title, user_id)
+        list_of_tasks = ListOfTasks(id=max_id, title=title, owner_id=user_id, remind_time=remind_time)
         user.listoftasks.append(list_of_tasks)
 
         self.repo.save(user)

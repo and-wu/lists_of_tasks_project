@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from uuid import UUID
+from datetime import time, datetime
 
 from domain.tasks import Task
 
@@ -12,7 +12,9 @@ class ListOfTasks:
     id: int
     title: str
     owner_id: int
+    remind_time: time | None = None  # ⏰ время ежедневного показа
     tasks: list[Task] = field(default_factory=list)
+
 
     # --- Domian Logic ---
 
@@ -45,9 +47,16 @@ class ListOfTasks:
 
     def to_dict(self) -> dict:
         return {"id": self.id, "title": self.title, "owner_id": self.owner_id,
+                "remind_time": self.remind_time.strftime("%H:%M") if self.remind_time else None,
                 "tasks": [task.to_dict() for task in self.tasks]}
 
     @classmethod
-    def from_dict(cls, id, title, owner_id, tasks, **kwargs) -> "ListOfTasks":
+    def from_dict(cls, id, title, owner_id, tasks, remind_time: str | None = None, **kwargs) -> "ListOfTasks":
         tasks_obj = [Task.from_dict(**t) for t in tasks]
-        return cls(id=id, title=title, owner_id=owner_id, tasks=tasks_obj)
+
+        parsed_remind_time: time | None = (
+            datetime.strptime(remind_time, "%H:%M").time()
+            if remind_time
+            else None
+        )
+        return cls(id=id, title=title, owner_id=owner_id, tasks=tasks_obj, remind_time=parsed_remind_time)
