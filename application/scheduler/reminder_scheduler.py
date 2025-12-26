@@ -42,7 +42,7 @@ async def send_list_reminder(bot: Bot, user_id: int, list_id: int, service):
     tasks = service.get_tasks(user_id, list_id)
 
     # Формируем текст напоминания
-    text = f"⏰ Напоминание о списке: *{task_list.title}*\n"
+    text = f"⏰ Напоминание о списке: \n*{task_list.title}*\n"
     if not tasks:
         text += "Список пуст"
 
