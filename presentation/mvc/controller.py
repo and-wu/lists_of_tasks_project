@@ -1,9 +1,13 @@
 
-from domain.errors import UserNotFoundError, InvalidMenuChoiceError, UsernameAlreadyExistsError
+from domain.errors import (
+    InvalidMenuChoiceError,
+    UsernameAlreadyExistsError,
+    UserNotFoundError,
+)
 
 
 class Controller:
-    def __init__(self, user_service, view):
+    def __init__(self, user_service, view) -> None:
         self.user_service = user_service
         self.view = view
         self._current_user_id = None
@@ -11,7 +15,7 @@ class Controller:
         self.running = True
 
 
-    def run(self):
+    def run(self) -> None:
         while self.running:
             try:
                 if not self._current_user_id:
@@ -22,7 +26,7 @@ class Controller:
                 self.view.error(e)
 
     # ===== Поток для неавторизованного пользователя =====
-    def auth_flow(self):
+    def auth_flow(self) -> None:
         self.view.auth_menu.show_auth_menu()
         choice = self.view.get_user_choice()
 
@@ -33,11 +37,11 @@ class Controller:
         elif choice == "q":
             self.quit()
         else:
-            raise InvalidMenuChoiceError()
+            raise InvalidMenuChoiceError
 
 
 
-    def select(self):
+    def select(self) -> None:
         users = self.user_service.repo.all()
 
         if not users:
@@ -50,14 +54,14 @@ class Controller:
 
             user = self.user_service.repo.get_by_id(user_id=int(raw_id))
             if user is None:
-                raise UserNotFoundError()
+                raise UserNotFoundError
             self.view.auth_menu.hello(user)
             self._current_user_id = user.id
             self.user = user
             break
 
 
-    def create_user(self):
+    def create_user(self) -> None:
         name = self.view.get_user_name()
         while True:
             username = self.view.get_user_username()
@@ -72,12 +76,12 @@ class Controller:
                 self.view.error(e)
 
 
-    def quit(self):
+    def quit(self) -> None:
         self.view.auth_menu.quit()
         self._running = False
 
     # ===== Поток для авторизованного пользователя =====
-    def main_flow(self):
+    def main_flow(self) -> None:
         self.view.main_menu.show_main_menu()
         choice = self.view.get_user_choice()
 
@@ -94,9 +98,9 @@ class Controller:
         elif choice == "l":
             self.quit()
         else:
-            raise InvalidMenuChoiceError()
+            raise InvalidMenuChoiceError
 
-    def create_lists_of_tasks(self):
+    def create_lists_of_tasks(self) -> None:
         self.view.main_menu.create_list_text()
         title = self.view.get_list_name()
         list_of_tasks = self.user_service.add_list_of_tasks(user_id=self._current_user_id, title=title)
@@ -111,7 +115,7 @@ class Controller:
                 return
             else:
                 try:
-                    raise InvalidMenuChoiceError()
+                    raise InvalidMenuChoiceError
                 except InvalidMenuChoiceError as e:
                     self.view.error(e)
 
@@ -121,14 +125,14 @@ class Controller:
         task = self.user_service.add_task(
             user_id=self._current_user_id,
             list_id=list_id,
-            value=value
+            value=value,
         )
 
         self.view.main_menu.get_task_created_text(task)
 
         return task
 
-    def create_task(self):
+    def create_task(self) -> None:
         self.view.main_menu.create_task_text()
         list_id = int(self.select_list_of_tasks())
 
@@ -136,9 +140,6 @@ class Controller:
 
         # Мини-меню после создания и добавления задачи
         while True:
-            print("\nЧто дальше?")
-            print("1 — Добавить еще задачу в этот список")
-            print("2 — Вернуться в главное меню")
 
             choice = self.view.get_user_choice()
 
@@ -150,12 +151,12 @@ class Controller:
             else:
                 raise InvalidMenuChoiceError
 
-    def show_lists_of_tasks(self):
+    def show_lists_of_tasks(self) -> None:
         if not self.user.listoftasks:
             self.view.main_menu.get_no_lists_text()
         self.view.show_lists(self.user.listoftasks)
 
-    def show_tasks(self):
+    def show_tasks(self) -> None:
         list_id = self.select_list_of_tasks()
 
         tasks = self.user_service.get_tasks(self._current_user_id, list_id)
@@ -177,7 +178,7 @@ class Controller:
                 self.view.error(e)
 
 
-    def logout(self):
+    def logout(self) -> None:
         self.view.main_menu.logout()
         self._current_user_id = None
         self.user = None

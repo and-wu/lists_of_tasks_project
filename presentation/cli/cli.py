@@ -1,8 +1,14 @@
-from typing import Callable
+from typing import TYPE_CHECKING
+
 from application.user.create_user import UserService
+from domain.tasks import Task
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 class CLI:
-    def __init__(self, user_service: UserService):
+    def __init__(self, user_service: UserService) -> None:
         self.user_service = user_service
         self._current_user_id: int | None = None
         self.user = None
@@ -24,95 +30,79 @@ class CLI:
             "q": ("Выйти из программы", self.quit),
         }
 
-
-    def run(self):
+    def run(self) -> None:
         while self._running:
             # Выбираем правильное меню
             if self._current_user_id is None:
                 menu = self.auth_actions
-                title = "Меню авторизации"
             else:
                 menu = self.main_actions
-                title = "Главное меню"
 
-            print(f"\n==== {title} ====")
-            for key, (value, func) in menu.items():
-                print(f"{key}: {value}")
+            for _value, func in menu.values():
+                pass
 
             choice = input("Выберите действие: ")
 
             action = menu.get(choice)
 
             if action is None:
-                print("Неверный пункт меню, попробуйте снова")
                 continue
 
             _, func = action
             try:
-                func()   # вызываем метод класса CLI
-            except Exception as e:
-                print(f"❌ Ошибка: {e}")
+                func()  # вызываем метод класса CLI
+            except Exception:
+                pass
 
-
-
-    def select(self):
-        print("Выберите пользователя")
+    def select(self) -> None:
         users = self.user_service.repo.all()
 
         if not users:
-            print("Еще нет ни одного пользователя")
+            pass
 
         while True:
             if users:
                 for user in users:
-                    print(f"{user.id} --- {user.username}")
-                user_id = input('введите число соответсвующее имени для выбора пользователя: ').strip()
+                    pass
+                user_id = input(
+                    "введите число соответсвующее имени для выбора пользователя: ",
+                ).strip()
 
                 try:
                     user = self.user_service.repo.get_by_id(user_id=int(user_id))
                     if user is None:
-                        raise ValueError("Пользователь с таким ID не найден")
-                    print(f"Приветсвуем вас {user.name}")
+                        msg = "Пользователь с таким ID не найден"
+                        raise ValueError(msg)
                     self._current_user_id = user.id
                     self.user = user
                     break
-                except Exception as e:
-                    print(f"Ошибка: {e}. Попробуйте снова.")
+                except Exception:
+                    pass
 
-
-    def creat(self):
-        print("register there")
-        name = input('введите ваше имя: ')
+    def creat(self) -> None:
+        name = input("введите ваше имя: ")
         while True:
-            username = input('введите ваше username: ')
+            username = input("введите ваше username: ")
 
             try:
                 user = self.user_service.create_user(name=name, username=username)
                 self._current_user_id = user.id
                 self.user = user
-                print("Пользователь успешно создан")
                 break
-            except ValueError as e:
-                print('Username уже существует, придумайте новый пожалуйста, а то мы не сможем вас добавить')
+            except ValueError:
+                pass
 
-        print(f"Вы - {user}\nВаш user_id = {self._current_user_id}")
-
-    def quit(self):
-        print("Выход из программы. До свидания!")
+    def quit(self) -> None:
         self._running = False
 
-    def create_lists_of_tasks(self):
-        print("Создания списка")
-        title = input('Введите название для списка задач - ')
-        list_of_tasks = self.user_service.add_list_of_tasks(user_id=self._current_user_id, title=title)
-        print(print(f"✅ Список '{list_of_tasks.title}' создан"))
+    def create_lists_of_tasks(self) -> None:
+        title = input("Введите название для списка задач - ")
+        list_of_tasks = self.user_service.add_list_of_tasks(
+            user_id=self._current_user_id,
+            title=title,
+        )
 
-        # Мини-меню после создания списка
         while True:
-            print("\nЧто дальше?")
-            print("1 — Добавить задачу в этот список")
-            print("2 — Вернуться в главное меню")
-
             choice = input("Выберите действие: ").strip()
 
             if choice == "1":
@@ -121,33 +111,23 @@ class CLI:
             elif choice == "2":
                 break
             else:
-                print("❌ Неверный ввод, попробуйте снова")
+                pass
 
-
-
-    def add_task_to_specific_list(self, list_id: int):
+    def add_task_to_specific_list(self, list_id: int) -> None:
         value = input("Введите текст задачи: ")
 
-        task = self.user_service.add_task(
+        self.user_service.add_task(
             user_id=self._current_user_id,
             list_id=list_id,
-            value=value
+            value=value,
         )
 
-        print(f"✅ Задача создана: {task.id} — {task.value}")
-
-
-    def create_task(self):
-        print("Создание задачи. Выбери список в который нужно добавить задачу")
+    def create_task(self) -> None:
         list_id = int(self.select_list_of_tasks())
         self.add_task_to_specific_list(list_id)
 
         # Мини-меню после создания и добавления задачи
         while True:
-            print("\nЧто дальше?")
-            print("1 — Добавить еще задачу в этот список")
-            print("2 — Вернуться в главное меню")
-
             choice = input("Выберите действие: ").strip()
 
             if choice == "1":
@@ -156,18 +136,16 @@ class CLI:
             elif choice == "2":
                 break
             else:
-                print("❌ Неверный ввод, попробуйте снова")
+                pass
 
-    def show_lists_of_tasks(self):
-
-        for list_tasks in self.user.listoftasks:
-            print(f"{list_tasks.id} - {list_tasks.title}")
+    def show_lists_of_tasks(self) -> None:
+        for _list_tasks in self.user.listoftasks:
+            pass
 
     def select_list_of_tasks(self) -> int | None:
         while True:
-            print("Выбор списка")
             self.show_lists_of_tasks()
-            raw = input('Введите номер списка задач - ')
+            raw = input("Введите номер списка задач - ")
 
             if raw.lower() == "q":
                 return None
@@ -175,17 +153,16 @@ class CLI:
             try:
                 return int(raw)
             except ValueError:
-                print("Ошибка: введите число")
+                pass
 
-    def display_tasks(self, tasks):
+    def display_tasks(self, tasks: list[Task]) -> None:
         if not tasks:
-            print("В этом списке нет задач.")
             return
 
-        for task in tasks:
-            print(f"Задача {task.id}: {task.value}: статус - {task.completed}")
+        for _task in tasks:
+            pass
 
-    def show_tasks(self):
+    def show_tasks(self) -> None:
         list_id = self.select_list_of_tasks()
 
         tasks = self.user_service.get_tasks(self._current_user_id, list_id)
@@ -193,8 +170,7 @@ class CLI:
         self.display_tasks(tasks)
 
 
-    def logout(self):
-        print("Вы вышли из аккаунта.")
+    def logout(self) -> None:
         self._current_user_id = None
 
 

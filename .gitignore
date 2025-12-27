@@ -2,3 +2,6 @@
 .idea/
 __pycache__/
 .env
+test.py
+/storage
+db.json

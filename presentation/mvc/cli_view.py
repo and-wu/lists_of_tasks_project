@@ -1,66 +1,56 @@
 
 class AuthMenuView:
-    """Отображение меню и сообщений авторизации"""
+    """Отображение меню и сообщений авторизации."""
 
-    def show_auth_menu(self):
-        print("1: Войти как существующий пользователь")
-        print("2: Зарегистрироваться")
-        print("q: Выйти из программы")
+    def show_auth_menu(self) -> None:
+        pass
 
-    def not_users(self):
-        print("Еще нет ни одного пользователя")
+    def not_users(self) -> None:
+        pass
 
-    def hello(self, user):
-        print(f"Приветсвуем вас {user.name}")
+    def hello(self, user) -> None:
+        pass
 
-    def successful_user_create_text(self, user):
-        print(f"Пользователь {user.name} успешно создан")
-        print(f"Вы - {user}\nВаш user_id = {user.id}")
+    def successful_user_create_text(self, user) -> None:
+        pass
 
-    def quit(self):
-        print("Выход из программы. До свидания!")
+    def quit(self) -> None:
+        pass
 
 
 class MainMenuView:
-    """Отображение главного меню и действий с задачами"""
+    """Отображение главного меню и действий с задачами."""
 
-    def show_main_menu(self):
-        print("1: Создать список задач")
-        print("2: Создать задачу")
-        print("3: Показать мои списки задач")
-        print("4: Посмотреть задачи в списке")
-        print("q: Выйти из аккаунта")
-        print("l: Выйти из программы")
+    def show_main_menu(self) -> None:
+        pass
 
-    def show_mini_menu(self):
-        print("\nЧто дальше?")
-        print("1: Добавить задачу в этот список")
-        print("2: Вернуться в главное меню")
+    def show_mini_menu(self) -> None:
+        pass
 
-    def create_list_text(self):
-        print("Создания списка")
+    def create_list_text(self) -> None:
+        pass
 
-    def successful_list_create_text(self, list_of_tasks):
-        print(f"✅ Список '{list_of_tasks.title}' создан")
+    def successful_list_create_text(self, list_of_tasks) -> None:
+        pass
 
-    def create_task_text(self):
-        print("**Создание задачи**, вот ваши списки:")
+    def create_task_text(self) -> None:
+        pass
 
-    def successful_task_create(self, task):
-        print(f"✅ Задача создана: {task.id} — {task.value}")
+    def successful_task_create(self, task) -> None:
+        pass
 
-    def not_tasks_text(self):
-        print("В этом списке нет задач.")
+    def not_tasks_text(self) -> None:
+        pass
 
-    def not_lists_user(self):
-        print("У вас еще нет списков")
+    def not_lists_user(self) -> None:
+        pass
 
-    def logout(self):
-        print("Выход из аккаунта. До свидания!")
+    def logout(self) -> None:
+        pass
 
 
 class CLIView:
-    """Базовый класс: общие методы ввода/вывода"""
+    """Базовый класс: общие методы ввода/вывода."""
 
     main_menu = MainMenuView()
     auth_menu = AuthMenuView()
@@ -92,25 +82,21 @@ class CLIView:
 
 
     # ===== Общий вывод =====
-    def show_users(self, users):
-        for u in users:
-            print(f"{u.id} — {u.username}")
+    def show_users(self, users) -> None:
+        for _u in users:
+            pass
 
-    def show_lists(self, lists):
-        print("Ваши списки:")
-        for l in lists:
-            print(f"{l.id} — {l.title}")
-        print()
+    def show_lists(self, lists) -> None:
+        for _l in lists:
+            pass
 
-    def show_tasks(self, tasks):
-        print("Задачи списка:")
-        for task in tasks:
-            print(f"Задача {task.id}: {task.value}: статус - {task.completed}")
-        print()
+    def show_tasks(self, tasks) -> None:
+        for _task in tasks:
+            pass
 
     # ===== Текстовые сообщения =====
-    def info(self, msg):
-        print(msg)
+    def info(self, msg) -> None:
+        pass
 
-    def error(self, error: Exception):
-        print(error)
+    def error(self, error: Exception) -> None:
+        pass

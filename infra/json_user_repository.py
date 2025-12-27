@@ -1,18 +1,12 @@
 import json
 from pathlib import Path
-from typing import Generator, Optional
 
-from domain.users import User
 from domain.interfaces.user_repository import IUserRepository
-
-
-# =============================================
-# Реализации JSON — ТОЛЬКО работа с данными, без создания таблиц!
-# =============================================
+from domain.users import User
 
 
 class JsonUserRepository(IUserRepository):
-    def __init__(self, file_path: Path):
+    def __init__(self, file_path: Path) -> None:
         self.file_path = file_path
         self._data = self._load()
 
@@ -20,7 +14,7 @@ class JsonUserRepository(IUserRepository):
         if not self.file_path.exists():
             return {}
         try:
-            with open(self.file_path, "r", encoding="utf-8") as f:
+            with open(self.file_path, encoding="utf-8") as f:
                 raw = json.load(f)
                 return {int(k): User.from_dict(**v) for k, v in raw.items()}
         except json.JSONDecodeError:
@@ -35,18 +29,16 @@ class JsonUserRepository(IUserRepository):
     def _next_id(self) -> int:
         return max(self._data.keys(), default=0) + 1
 
-    def get_by_id(self, user_id: int) -> Optional[User]:
+    def get_by_id(self, user_id: int) -> User | None:
         return self._data.get(user_id)
 
-    def get_by_username(self, username: str) -> Optional[User]:
+    def get_by_username(self, username: str) -> User | None:
         for user in self._data.values():
             if user.username == username:
                 return user
         return None
 
     def save(self, user: User) -> User:
-        #if user.id <= 0 or user.id not in self._data:
-        #    user.id = self._next_id()
         self._data[user.id] = user
         self._save()
 
@@ -60,8 +52,8 @@ class JsonUserRepository(IUserRepository):
         self._save()
 
     def delete_list(self, user_id: int, list_id: int) -> bool:
-        """
-        Удаляет список пользователя по ID.
+        """Удаляет список пользователя по ID.
+
         Возвращает True, если список найден и удалён, иначе False.
         """
         user = self.get_by_id(user_id)
@@ -77,10 +69,10 @@ class JsonUserRepository(IUserRepository):
 
         return False
 
-    def delete_task(self, user_id: int, task_id: int) -> None:
-        """
-            Удаляет задачу пользователя по task_id.
-            Возвращает True, если задача найдена и удалён, иначе False.
+    def delete_task(self, user_id: int, task_id: int) -> bool:
+        """Удаляет задачу пользователя по task_id.
+
+        Возвращает True, если задача найдена и удалён, иначе False.
         """
         user = self.get_by_id(user_id)
         if not user:
