@@ -133,6 +133,7 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
 
 @router.callback_query(ListStates.waiting_for_remind_decision, F.data.in_(["list_remind_yes", "list_remind_no"]))
 async def process_remind_decision(callback: CallbackQuery, state: FSMContext, service: UserService):
+    """Обработчик контекстного меню установки напоминания."""
     data = await state.get_data()
     user_message_id = data.get("user_message_id")
 
@@ -169,6 +170,7 @@ async def process_remind_decision(callback: CallbackQuery, state: FSMContext, se
 @router.message(ListStates.waiting_for_remind_time)
 async def process_remind_time(message: Message, state: FSMContext,
                               service: UserService, reminder_scheduler: ReminderScheduler):
+    """Обработчик введенного время."""
     try:
         hours, minutes = map(int, message.text.split(":"))
         remind_time = time(hour=hours, minute=minutes)
@@ -233,6 +235,7 @@ async def cancel_action(callback: CallbackQuery, state: FSMContext, service: Use
 
 @router.callback_query(F.data == "list:delete")
 async def delete_list_start(callback: CallbackQuery, service: UserService):
+    """Обработчик запуска процесса удаления списка."""
     user = service.get_user_by_id(callback.from_user.id)
     if not user.listoftasks:
         await callback.message.edit_text(list_view.no_lists)
@@ -247,6 +250,7 @@ async def delete_list_start(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("list:confirm_delete:"))
 async def confirm_delete(callback: CallbackQuery, service: UserService):
+    """Обработчик контекстного окна подтверждения удаления списка."""
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
 
@@ -264,6 +268,7 @@ async def confirm_delete(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("list:delete_yes:"))
 async def delete_list_confirm(callback: CallbackQuery, service: UserService):
+    """Обработчик подтверждения удаления списка."""
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
 
@@ -274,20 +279,24 @@ async def delete_list_confirm(callback: CallbackQuery, service: UserService):
     await show_lists_view(callback=callback, service=service, prefix_text=text)
     await callback.answer(text=list_view.list_deleted_success)
 
-
+#1 Дублируется логика с обработчиком снизу, проверить.  # noqa: RUF003
 @router.callback_query(F.data.startswith("list:delete_no:"))
 async def delete_list_cancel(callback: CallbackQuery, service: UserService):
+    """Обработчик отмены удаления списка."""
     await show_lists_view(callback=callback, service=service)
     await callback.answer(text=list_view.delete_action_canceled)
 
 
 @router.callback_query(F.data == "list:delete_cancel")
 async def cancel_delete_start(callback: CallbackQuery, service: UserService):
+    """Обработчик отмены удаления списка."""
     await show_lists_view(callback=callback, service=service)
     await callback.answer(text=list_view.delete_action_canceled)
 
 
+#2 Вынести в другой модуль, т.к. используется не только для lists.
 async def delete_fsm_prompt_message(state: FSMContext, bot, chat_id: int):
+    """Вспомогательная функция для удаления сообщения."""
     data = await state.get_data()
     prompt_message_id = data.get("prompt_message_id")
 

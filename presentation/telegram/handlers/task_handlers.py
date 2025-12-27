@@ -1,3 +1,6 @@
+import builtins
+import contextlib
+
 from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
@@ -17,6 +20,7 @@ task_view = TaskView()
 
 @router.callback_query(F.data.startswith("list:select"))
 async def show_tasks(callback: CallbackQuery, service: UserService):
+    """Обработчик для отображения задач."""
     _, action, list_id = callback.data.split(":")
 
     user_id = callback.from_user.id
@@ -42,27 +46,24 @@ async def show_tasks(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("task:create"))
 async def create_task(callback: CallbackQuery, state: FSMContext):
+    """Обработчик для старта создания новой задачи."""
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
+    sent_message = await callback.message.edit_text(task_view.task_name_prompt,
+                                                    reply_markup=get_cancel_keyboard("task"))  # просим ввести текст задачи
 
-    # сохраняем id списка в состоянии
-    await state.update_data(list_id=list_id)
 
     # ставим состояние ожидания текста задачи
     await state.set_state(TaskStates.waiting_for_task_text) # ставим состояние
 
-
-
-    sent_message = await callback.message.edit_text(task_view.task_name_prompt,
-                                     reply_markup=get_cancel_keyboard("task")) # просим ввести текст задачи
-
-    # сохраняем ID сообщения бота
-    await state.update_data(prompt_message_id=sent_message.message_id)
+    # сохраняем id списка в состоянии и ID сообщения бота
+    await state.update_data(list_id=list_id, prompt_message_id=sent_message.message_id)
 
     await callback.answer()
 
 @router.message(TaskStates.waiting_for_task_text)
 async def process_task_text(message: Message, state: FSMContext, service: UserService):
+    """Обработчик для заголовка новой задачи."""
     task_text = message.text.strip()
 
     if not task_text:
@@ -74,6 +75,7 @@ async def process_task_text(message: Message, state: FSMContext, service: UserSe
     data = await state.get_data()
     list_id = data["list_id"]
 
+    # 3 Вынести в UseCase.
     # создаём задачу
     task = service.add_task(user_id=message.from_user.id,
                             list_id=list_id,
@@ -128,6 +130,7 @@ async def cancel_action_create(callback: CallbackQuery, state: FSMContext, servi
 
 @router.callback_query(F.data.startswith("task:select"))
 async def select_task(callback: CallbackQuery, service: UserService):
+    """Обработчик выбора задачи."""
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -144,6 +147,7 @@ async def select_task(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("task:edit:"))
 async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserService):
+    """Обработчик редактирования задачи."""
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -165,6 +169,7 @@ async def edit_task(callback: CallbackQuery, state: FSMContext, service: UserSer
 
 @router.message(TaskStates.waiting_for_new_task_text)
 async def process_new_task_text(message: Message,state: FSMContext,service: UserService):
+    """Обработчик создания нового текста задачи."""
     new_text = message.text.strip()
 
     if not new_text:
@@ -181,11 +186,8 @@ async def process_new_task_text(message: Message,state: FSMContext,service: User
     # удаляем сообщение с приглашением к вводу
     prompt_message_id = data.get("prompt_message_id")
     if prompt_message_id:
-        try:
+        with contextlib.suppress(builtins.BaseException):
             await message.bot.delete_message(chat_id=message.chat.id, message_id=prompt_message_id)
-            #await delete_fsm_prompt_message(state=state, bot=message.bot, chat_id=message.chat.id)
-        except:
-            pass
 
     # удаляем сообщение пользователя
     try:
@@ -212,6 +214,7 @@ async def process_new_task_text(message: Message,state: FSMContext,service: User
 
 @router.callback_query(F.data.startswith("tasks:back:"))
 async def back_to_tasks(callback: CallbackQuery, service: UserService):
+    """Обработчик перехода назад к списку списков задач."""
     _, _, list_id = callback.data.split(":")
     list_id = int(list_id)
 
@@ -258,6 +261,7 @@ async def cancel_action_edit_task(callback: CallbackQuery, state: FSMContext, se
 
 @router.callback_query(F.data.startswith("task:toggle:"))
 async def toggle_task_completed(callback: CallbackQuery, service: UserService):
+    """Обработчик переключению статуса задачи."""
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -280,6 +284,11 @@ async def toggle_task_completed(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("task:delete:"))
 async def delete_task(callback: CallbackQuery, service: UserService):
+    """
+    Обработчик удаления задачи.
+
+    Вызывает контекстное окно "Да/Нет".
+    """
     _, _, task_id = callback.data.split(":")
     task_id = int(task_id)
 
@@ -296,6 +305,7 @@ async def delete_task(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("tasks:delete:yes:"))
 async def delete_task_yes(callback: CallbackQuery, service: UserService):
+    """Обработчик подтверждения удаления задачи."""
     parts = callback.data.split(":")
     task_id = int(parts[-2])
     list_id = int(parts[-1])
@@ -316,6 +326,7 @@ async def delete_task_yes(callback: CallbackQuery, service: UserService):
 
 @router.callback_query(F.data.startswith("tasks:delete:no:"))
 async def delete_task_no(callback: CallbackQuery, service: UserService):
+    """Обработчик отмены удаления задачи."""
     parts = callback.data.split(":")
     task_id = int(parts[-2])
     list_id = int(parts[-1])
