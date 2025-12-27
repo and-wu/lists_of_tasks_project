@@ -30,7 +30,6 @@ async def go_to_main_menu(callback: CallbackQuery):
     await callback.message.edit_text(
         text=list_view.main_menu,
         reply_markup=get_main_menu_keyboard(),
-        parse_mode="Markdown"
     )
 
     # Закрываем "часики" на кнопке
@@ -53,11 +52,8 @@ async def show_lists_view(callback: CallbackQuery, service: UserService, prefix_
         # сообщение удалено — отправляем новое
         await callback.message.answer(
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_lists_keyboard(user.listoftasks)
         )
-    # except (TelegramBadRequest, TelegramForbiddenError)as e:
-    #    logger.debug(f"show_lists_view edit_text failed: {e}")
 
 @router.callback_query(F.data == "lists:show")
 async def show_lists(callback: CallbackQuery, service: UserService):
@@ -217,7 +213,6 @@ async def process_remind_time(message: Message, state: FSMContext,
     text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
 
     await message.answer(text=text,
-                         parse_mode="Markdown",
                          reply_markup=get_lists_keyboard(user.listoftasks))
 
     await state.clear()

@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -22,7 +24,8 @@ from presentation.telegram.handlers.task_handlers import router as task_callback
 TOKEN = "YOUR_BOT_TOKEN"
 
 async def start():
-    bot = Bot(token=BOT_TOKEN)
+    bot = Bot(token=BOT_TOKEN,
+              default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
 
     repo = create_repository(

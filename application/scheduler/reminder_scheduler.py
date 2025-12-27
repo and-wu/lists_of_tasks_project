@@ -23,7 +23,6 @@ async def NOT_send_list_reminder(bot: Bot, user_id: int, list_id: int, service: 
         await bot.send_message(
             chat_id=user_id,
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_lists_keyboard([task_list])
         )
     except Exception:
@@ -51,7 +50,6 @@ async def send_list_reminder(bot: Bot, user_id: int, list_id: int, service):
         await bot.send_message(
             chat_id=user_id,
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id)
         )
     except TelegramBadRequest:
@@ -59,7 +57,6 @@ async def send_list_reminder(bot: Bot, user_id: int, list_id: int, service):
         await bot.send_message(
             chat_id=user_id,
             text=text,
-            parse_mode="Markdown",
             reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id)
         )
 

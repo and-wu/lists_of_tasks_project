@@ -34,7 +34,6 @@ async def show_tasks(callback: CallbackQuery, service: UserService):
 
     text = task_view.get_list_title(task_list.title)
     await callback.message.edit_text(text=text,
-                                     parse_mode="Markdown",
                                      reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id))
 
     await callback.answer()  # обязательно закрываем "часики"
@@ -98,7 +97,6 @@ async def process_task_text(message: Message, state: FSMContext, service: UserSe
     text += task_view.get_list_title(task_list.title)
 
     await message.answer(text=text,
-                         parse_mode="Markdown",
                          reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id))
 
 
@@ -123,7 +121,6 @@ async def cancel_action_create(callback: CallbackQuery, state: FSMContext, servi
     text = task_view.get_list_title(task_list.title)
 
     await callback.message.edit_text(text=text,
-                         parse_mode="Markdown",
                          reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id))
 
     await callback.answer()
@@ -230,7 +227,6 @@ async def back_to_tasks(callback: CallbackQuery, service: UserService):
 
     await callback.message.edit_text(
         text=task_view.get_list_title(task_list.title),
-        parse_mode="Markdown",
         reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id)
     )
 
@@ -313,7 +309,6 @@ async def delete_task_yes(callback: CallbackQuery, service: UserService):
     text += (task_view.get_list_title(task_list.title) if tasks else task_view.no_tasks_in_list(task_list.title))
 
     await callback.message.edit_text(text=text,
-                                     parse_mode="Markdown",
                                      reply_markup=get_tasks_keyboard(tasks, list_id)
                                      )
 

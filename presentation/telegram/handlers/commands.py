@@ -31,5 +31,4 @@ async def cmd_start(message: Message, service: UserService):
     await message.answer(
         text,
         reply_markup=get_main_menu_keyboard(),
-        parse_mode="Markdown"
     )
