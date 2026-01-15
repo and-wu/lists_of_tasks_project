@@ -1,6 +1,5 @@
 import sqlite3
 from pathlib import Path
-import json
 
 # =============================================
 # Отдельный сервис инициализации (миграции)

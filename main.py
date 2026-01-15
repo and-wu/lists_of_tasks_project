@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
@@ -43,6 +42,8 @@ async def start():
         bot=bot,
         service=service
     )
+
+    reminder_scheduler.schedule_daily_reset()
 
     # ❗ Кладём в dp (чтобы доставать в хэндлерах)
     dp["reminder_scheduler"] = reminder_scheduler

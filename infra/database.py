@@ -1,5 +1,3 @@
-import json
-from domain.users import User
 
 import sqlite3
 from contextlib import contextmanager

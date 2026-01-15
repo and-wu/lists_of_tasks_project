@@ -1,5 +1,4 @@
 from datetime import time
-from typing import Optional
 
 from domain.task_list import ListOfTasks
 from domain.tasks import Task
@@ -82,7 +81,7 @@ class UserService:
             user_lists.append((listoftasks.id, listoftasks.title))
         return user_lists
 
-    def get_list_by_id(self, user_id: int, list_id: int) -> Optional[ListOfTasks]:
+    def get_list_by_id(self, user_id: int, list_id: int) -> ListOfTasks | None:
         user = self.repo.get_by_id(user_id)
 
         for listoftasks in user.listoftasks:
@@ -137,3 +136,6 @@ class UserService:
                     return task
 
         raise ValueError(f"Task with id={task_id} not found")
+
+    def reset_all_tasks(self) -> dict[int, str]:
+        return self.repo.reset_all_tasks()

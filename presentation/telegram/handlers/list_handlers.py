@@ -151,7 +151,7 @@ async def process_remind_decision(callback: CallbackQuery, state: FSMContext, se
             pass
 
     if callback.data == "list_remind_no":
-       
+
         await show_lists_view(callback=callback, service=service)
 
         await state.clear()

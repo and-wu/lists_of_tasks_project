@@ -29,7 +29,7 @@ async def NOT_send_list_reminder(bot: Bot, user_id: int, list_id: int, service: 
         pass
 
 
-async def send_list_reminder(bot: Bot, user_id: int, list_id: int, service):
+async def send_list_reminder(bot: Bot, user_id: int, list_id: int, service: UserService):
     """
     Отправляет напоминание о конкретном списке задач пользователя.
     Используется для APScheduler.
@@ -85,3 +85,27 @@ class ReminderScheduler:
             self.scheduler.remove_job(job_id)
         except Exception:
             pass
+
+    def schedule_daily_reset(self):
+        async def job():
+            reports = self.service.reset_all_tasks()
+
+            for user_id, text in reports.items():
+                try:
+                    await self.bot.send_message(
+                        chat_id=user_id,
+                        text=text,
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    # пользователь мог заблокировать бота
+                    pass
+
+        self.scheduler.add_job(
+            job,
+            trigger="cron",
+            hour=17,
+            minute=15,
+            id="daily_tasks_reset",
+            replace_existing=True
+        )

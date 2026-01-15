@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Generator, Optional
 
 from domain.users import User
 from domain.interfaces.user_repository import IUserRepository
@@ -20,7 +19,7 @@ class JsonUserRepository(IUserRepository):
         if not self.file_path.exists():
             return {}
         try:
-            with open(self.file_path, "r", encoding="utf-8") as f:
+            with open(self.file_path, encoding="utf-8") as f:
                 raw = json.load(f)
                 return {int(k): User.from_dict(**v) for k, v in raw.items()}
         except json.JSONDecodeError:
@@ -35,10 +34,10 @@ class JsonUserRepository(IUserRepository):
     def _next_id(self) -> int:
         return max(self._data.keys(), default=0) + 1
 
-    def get_by_id(self, user_id: int) -> Optional[User]:
+    def get_by_id(self, user_id: int) -> User | None:
         return self._data.get(user_id)
 
-    def get_by_username(self, username: str) -> Optional[User]:
+    def get_by_username(self, username: str) -> User | None:
         for user in self._data.values():
             if user.username == username:
                 return user
@@ -95,3 +94,48 @@ class JsonUserRepository(IUserRepository):
                     return True
 
         return False
+
+    def reset_all_tasks_test(self) -> None:
+        """
+        Сбросить completed у всех задач всех пользователей
+        """
+        #user = self.get_by_id(user_id)
+        for user in self._data.values():
+            for list_of_task in user.listoftasks:
+                for task in list_of_task.tasks:
+                    task.completed = False
+
+        self._save()
+        print("Все задачи сброшены")
+
+    def reset_all_tasks(self) -> dict[int, str]:
+        """
+        Сбросить completed у всех задач
+        и вернуть отчёт для каждого пользователя
+        """
+        reports: dict[int, str] = {}
+
+        for user_id, user in self._data.items():
+            lines = []
+            lines.append("🕒 *Ежедневный сброс задач*\n")
+
+            for task_list in user.listoftasks:
+                lines.append(f"📋 *{task_list.title}*")
+
+                if not task_list.tasks:
+                    lines.append("— список пуст")
+                    continue
+
+                for task in task_list.tasks:
+                    status = "✅ выполнена" if task.completed else "❌ не выполнена"
+                    lines.append(f"• {task.value} — {status}")
+
+                    # Сброс
+                    task.completed = False
+
+                lines.append("")
+
+            reports[user_id] = "\n".join(lines)
+
+        self._save()
+        return reports

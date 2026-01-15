@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 from application.user.create_user import UserService
 
 class CLI:
@@ -92,7 +92,7 @@ class CLI:
                 self.user = user
                 print("Пользователь успешно создан")
                 break
-            except ValueError as e:
+            except ValueError:
                 print('Username уже существует, придумайте новый пожалуйста, а то мы не сможем вас добавить')
 
         print(f"Вы - {user}\nВаш user_id = {self._current_user_id}")
