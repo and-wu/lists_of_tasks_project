@@ -79,6 +79,7 @@ class ReminderScheduler:
             replace_existing=True
         )
 
+
     def remove_list_reminder(self, user_id: int, list_id: int):
         job_id = f"list_{user_id}_{list_id}"
         try:
