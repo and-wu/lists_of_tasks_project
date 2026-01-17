@@ -7,12 +7,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from application.user.create_user import UserService
-from presentation.telegram.handlers.list_handlers import delete_fsm_prompt_message
 from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard, extra_task_menu, \
     get_task_detail_keyboard, get_confirm_delete_task_keyboard
+from presentation.telegram.utils.fsm_cleanup import delete_fsm_prompt_message
 
 router = Router()
 

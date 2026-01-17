@@ -40,7 +40,7 @@ async def start():
     reminder_scheduler = ReminderScheduler(
         scheduler=scheduler,
         bot=bot,
-        service=service
+        service=service,
     )
 
     reminder_scheduler.schedule_daily_reset()

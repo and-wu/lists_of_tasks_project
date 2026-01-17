@@ -139,3 +139,8 @@ class UserService:
 
     def reset_all_tasks(self) -> dict[int, str]:
         return self.repo.reset_all_tasks()
+
+    def set_google_sheet(self, user_id: int, sheet_url: str):
+        user = self.repo.get_by_id(user_id)
+        user.google_sheet_url = sheet_url
+        self.repo.save(user)

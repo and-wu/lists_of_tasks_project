@@ -21,7 +21,11 @@ class JsonUserRepository(IUserRepository):
         try:
             with open(self.file_path, encoding="utf-8") as f:
                 raw = json.load(f)
-                return {int(k): User.from_dict(**v) for k, v in raw.items()}
+                return {
+                    int(user_id): User.from_dict(**user_data)
+                    for user_id, user_data in raw.items()
+                }
+                #return {int(k): User.from_dict(**v) for k, v in raw.items()}
         except json.JSONDecodeError:
             return {}
 
@@ -108,34 +112,59 @@ class JsonUserRepository(IUserRepository):
         self._save()
         print("Все задачи сброшены")
 
-    def reset_all_tasks(self) -> dict[int, str]:
+    def reset_all_tasks(self) -> dict[int, list[dict]]:
         """
-        Сбросить completed у всех задач
-        и вернуть отчёт для каждого пользователя
+        Возвращает данные по задачам ДО сброса
         """
-        reports: dict[int, str] = {}
+        result = {}
 
         for user_id, user in self._data.items():
-            lines = []
-            lines.append("🕒 *Ежедневный сброс задач*\n")
+            user_rows = []
 
             for task_list in user.listoftasks:
-                lines.append(f"📋 *{task_list.title}*")
-
-                if not task_list.tasks:
-                    lines.append("— список пуст")
-                    continue
-
                 for task in task_list.tasks:
-                    status = "✅ выполнена" if task.completed else "❌ не выполнена"
-                    lines.append(f"• {task.value} — {status}")
+                    user_rows.append({
+                        "username": user.username,
+                        "list_title": task_list.title,
+                        "task": task.value,
+                        "completed": task.completed
+                    })
 
-                    # Сброс
                     task.completed = False
 
-                lines.append("")
-
-            reports[user_id] = "\n".join(lines)
+            result[user_id] = user_rows
 
         self._save()
-        return reports
+        return result
+
+    # def reset_all_tasks(self) -> dict[int, str]:
+    #     """
+    #     Сбросить completed у всех задач
+    #     и вернуть отчёт для каждого пользователя
+    #     """
+    #     reports: dict[int, str] = {}
+    #
+    #     for user_id, user in self._data.items():
+    #         lines = []
+    #         lines.append("🕒 *Ежедневный сброс задач*\n")
+    #
+    #         for task_list in user.listoftasks:
+    #             lines.append(f"📋 *{task_list.title}*")
+    #
+    #             if not task_list.tasks:
+    #                 lines.append("— список пуст")
+    #                 continue
+    #
+    #             for task in task_list.tasks:
+    #                 status = "✅ выполнена" if task.completed else "❌ не выполнена"
+    #                 lines.append(f"• {task.value} — {status}")
+    #
+    #                 # Сброс
+    #                 task.completed = False
+    #
+    #             lines.append("")
+    #
+    #         reports[user_id] = "\n".join(lines)
+    #
+    #     self._save()
+    #     return reports

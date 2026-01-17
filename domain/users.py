@@ -13,6 +13,7 @@ class User:
     id: int
     name: str
     username: str
+    google_sheet_url: str | None = None
     listoftasks: list[ListOfTasks] = field(default_factory=list)
 
     def rename(self, new_name: str):
@@ -22,11 +23,39 @@ class User:
 
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "name": self.name, "username": self.username, "listoftasks": [ls.to_dict() for ls in self.listoftasks]}
+        return {"id": self.id,
+                "name": self.name,
+                "username": self.username,
+                "google_sheet_url": self.google_sheet_url,
+                "listoftasks": [ls.to_dict() for ls in self.listoftasks]
+                }
 
+
+    # @classmethod
+    # def from_dict(cls, id, name, username, google_sheet_url=None, listoftasks=None, **kwargs) -> "User":
+    #     #listoftasks = listoftasks or []
+    #     listoftasks_obj = [ListOfTasks.from_dict(**l) for l in listoftasks]
+    #     return cls(id=id,
+    #                name=name,
+    #                username=username,
+    #                google_sheet_url=google_sheet_url,
+    #                listoftasks=listoftasks_obj
+    #                )
 
     @classmethod
-    def from_dict(cls, id, name, username, listoftasks, **kwargs) -> "User":
-        #listoftasks = listoftasks or []
-        listoftasks_obj = [ListOfTasks.from_dict(**l) for l in listoftasks]
-        return cls(id=id, name=name, username=username, listoftasks=listoftasks_obj)
+    def from_dict(cls, **data) -> "User":
+        """
+        Безопасно создаёт User из dict.
+        Работает даже если каких-то полей нет.
+        """
+
+        raw_lists = data.get("listoftasks", [])
+        lists = [ListOfTasks.from_dict(**lst) for lst in raw_lists]
+
+        return cls(
+            id=data["id"],
+            name=data["name"],
+            username=data.get("username"),
+            google_sheet_url=data.get("google_sheet_url"),
+            listoftasks=lists
+        )

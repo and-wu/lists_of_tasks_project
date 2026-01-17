@@ -17,6 +17,7 @@ from presentation.telegram.keyboards.list_keyboards import (
     get_lists_for_delete_keyboard,
     get_confirm_delete_keyboard,
     get_yes_no_keyboard)
+from presentation.telegram.utils.fsm_cleanup import delete_fsm_prompt_message
 
 router = Router()
 
@@ -294,19 +295,3 @@ async def cancel_delete_start(callback: CallbackQuery, service: UserService):
     await callback.answer(text=list_view.delete_action_canceled)
 
 
-#2 Вынести в другой модуль, т.к. используется не только для lists.
-async def delete_fsm_prompt_message(state: FSMContext, bot, chat_id: int):
-    """Вспомогательная функция для удаления сообщения."""
-    data = await state.get_data()
-    prompt_message_id = data.get("prompt_message_id")
-
-    if not prompt_message_id:
-        return
-
-    try:
-        await bot.delete_message(
-            chat_id=chat_id,
-            message_id=prompt_message_id
-        )
-    except TelegramForbiddenError:
-        pass
