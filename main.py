@@ -11,6 +11,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from application.poll.daily_poll_service import DailyPollService
 from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.user.create_user import UserService
 from infra.factory import create_repository, DBType
@@ -19,10 +20,16 @@ from config_data.config import BOT_TOKEN
 from presentation.telegram.handlers.commands import commands_router
 from presentation.telegram.handlers.list_handlers import router as list_callbacks_router
 from presentation.telegram.handlers.task_handlers import router as task_callbacks_router
+from presentation.telegram.handlers.poll_handlers import router as poll_callbacks_router
 
 TOKEN = "YOUR_BOT_TOKEN"
 
 async def start():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+
     bot = Bot(token=BOT_TOKEN,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
@@ -31,27 +38,35 @@ async def start():
         db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
         path=Path("storage/users"))
 
+    # сервисы
+    service = UserService(repo=repo)
+    poll_service = DailyPollService(bot=bot, user_service=service)
+
     # ⏰ APScheduler
     scheduler = AsyncIOScheduler()
     scheduler.start()
 
-    # сервисы
-    service = UserService(repo=repo)
     reminder_scheduler = ReminderScheduler(
         scheduler=scheduler,
         bot=bot,
         service=service,
+        poll_service=poll_service,
     )
 
+    # Регистрируем все существующие списки с напоминаниями
+    reminder_scheduler.schedule_all_polls_on_startup()
     reminder_scheduler.schedule_daily_reset()
+
 
     # ❗ Кладём в dp (чтобы доставать в хэндлерах)
     dp["reminder_scheduler"] = reminder_scheduler
     dp["user_service"] = service
+    dp["poll_service"] = poll_service
 
     dp.include_router(commands_router)
     dp.include_router(list_callbacks_router)
     dp.include_router(task_callbacks_router)
+    dp.include_router(poll_callbacks_router)
 
     try:
         # Удаляем возможный вебхук и сбрасываем накопившиеся апдейты

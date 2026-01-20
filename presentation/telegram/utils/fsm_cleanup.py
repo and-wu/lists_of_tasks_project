@@ -1,4 +1,4 @@
-from aiogram.exceptions import TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 
@@ -15,5 +15,9 @@ async def delete_fsm_prompt_message(state: FSMContext, bot, chat_id: int):
             chat_id=chat_id,
             message_id=prompt_message_id
         )
-    except TelegramForbiddenError:
+    except TelegramBadRequest:
+        # сообщение уже удалено — это НЕ ошибка
         pass
+
+        # 🔥 ВАЖНО: очищаем prompt из FSM
+    await state.update_data(prompt_message_id=None)

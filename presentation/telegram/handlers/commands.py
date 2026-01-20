@@ -37,6 +37,26 @@ async def cmd_start(message: Message, state: FSMContext, service: UserService):
     #     reply_markup=get_main_menu_keyboard(),
     # )
 
+    user = service.get_or_create_user(
+        user_id=message.from_user.id,
+        name=message.from_user.first_name,
+        username=message.from_user.username
+    )
+
+    # ✅ если таблица уже есть — НЕ спрашиваем
+    if user.google_sheet_url:
+        text = (
+                bot_messages.say_hello(username=message.from_user.first_name)
+                + "\n\n"
+                + bot_messages.main_menu
+        )
+
+        await message.answer(
+            text,
+            reply_markup=get_main_menu_keyboard()
+        )
+        return
+
     text = (
             bot_messages.say_hello(username=message.from_user.first_name)
             + "\n\n"
@@ -60,12 +80,32 @@ async def process_google_sheet_link(message: Message,
                                     ):
     link = message.text.strip()
 
+    # ❌ НЕПРАВИЛЬНАЯ ССЫЛКА
+
     if not link.startswith("https://docs.google.com/spreadsheets"):
-        await message.answer(
+        # удаляем сообщение пользователя
+        try:
+            await message.delete()
+        except Exception:
+            pass
+
+        # удаляем прошлый prompt бота
+        await delete_fsm_prompt_message(
+            state=state,
+            bot=message.bot,
+            chat_id=message.chat.id
+        )
+
+    if not link.startswith("https://docs.google.com/spreadsheets"):
+        sent =await message.answer(
             "❌ Это не похоже на ссылку на Google Таблицу.\n"
             "Пришлите корректную ссылку."
         )
+
+        await state.update_data(prompt_message_id=sent.message_id)
         return
+
+    # ✅ ПРАВИЛЬНАЯ ССЫЛКА
 
     # сохраняем ссылку пользователю
     service.set_google_sheet(

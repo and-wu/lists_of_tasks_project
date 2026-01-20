@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from application.scheduler.reminder_scheduler import ReminderScheduler
-from application.usecases.lists import CreateNewListUseCase, AddRemindTimeUseCase
+from application.usecases.lists import CreateNewListUseCase, AddRemindTimeUseCase, CreateDailyPollUseCase
 from application.user.create_user import UserService
 from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
 from presentation.telegram.states.list_states import ListStates
@@ -179,10 +179,9 @@ async def process_remind_time(message: Message, state: FSMContext,
         await message.answer("❌ Неверный формат. Введите время как HH:MM")
         return
 
-    use_case = AddRemindTimeUseCase(
-        user_service=service,
-        scheduler=reminder_scheduler,
-    )
+    remind_use_case = AddRemindTimeUseCase(scheduler=reminder_scheduler)
+
+    poll_use_case = CreateDailyPollUseCase(scheduler=reminder_scheduler)
 
     data = await state.get_data()
     list_title = data["list_title"]
@@ -198,10 +197,16 @@ async def process_remind_time(message: Message, state: FSMContext,
         except TelegramForbiddenError:
             pass
 
-    await use_case.execute(
+    await remind_use_case.execute(
         user_id=message.from_user.id,
         list_id=new_list_tasks_id,
-        remind_time=remind_time,
+        remind_time=remind_time
+    )
+
+    await poll_use_case.execute(
+        user_id=message.from_user.id,
+        list_id=new_list_tasks_id,
+        remind_time=remind_time
     )
 
     # удаляем сообщение пользователя с временем

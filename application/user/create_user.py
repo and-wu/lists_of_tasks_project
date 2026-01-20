@@ -12,13 +12,24 @@ class UserService:
 
     def create_user(self, user_id, name, username) -> User:
         # Проверки
-        if self.repo.get_by_username(username):
-            raise ValueError("Username already exists")
+        if self.repo.get_by_id(user_id):
+            raise ValueError("User already exists")
 
-        user = User(id=user_id, name=name, username=username)
+        user = User(
+            id=user_id,
+            name=name,
+            username=username
+        )
+
         self.repo.save(user)
+        return user
 
-        return User(id=user_id, name=user.name, username=user.username)
+    def get_or_create_user(self, user_id: int, name: str, username: str | None) -> User:
+        user = self.repo.get_by_id(user_id)
+        if user:
+            return user
+
+        return self.create_user(user_id, name, username)
 
     def get_user_by_id(self, user_id: int) -> User:
         user = self.repo.get_by_id(user_id)
@@ -137,10 +148,16 @@ class UserService:
 
         raise ValueError(f"Task with id={task_id} not found")
 
-    def reset_all_tasks(self) -> dict[int, str]:
+    def reset_all_tasks(self) -> dict[int, list[dict]]:
         return self.repo.reset_all_tasks()
 
     def set_google_sheet(self, user_id: int, sheet_url: str):
         user = self.repo.get_by_id(user_id)
         user.google_sheet_url = sheet_url
         self.repo.save(user)
+
+    def get_all_users(self) -> list[User]:
+        """
+        Возвращает список всех пользователей из репозитория.
+        """
+        return self.repo.all()

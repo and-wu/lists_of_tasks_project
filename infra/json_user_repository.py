@@ -47,6 +47,7 @@ class JsonUserRepository(IUserRepository):
                 return user
         return None
 
+
     def save(self, user: User) -> User:
         #if user.id <= 0 or user.id not in self._data:
         #    user.id = self._next_id()
@@ -136,35 +137,3 @@ class JsonUserRepository(IUserRepository):
 
         self._save()
         return result
-
-    # def reset_all_tasks(self) -> dict[int, str]:
-    #     """
-    #     Сбросить completed у всех задач
-    #     и вернуть отчёт для каждого пользователя
-    #     """
-    #     reports: dict[int, str] = {}
-    #
-    #     for user_id, user in self._data.items():
-    #         lines = []
-    #         lines.append("🕒 *Ежедневный сброс задач*\n")
-    #
-    #         for task_list in user.listoftasks:
-    #             lines.append(f"📋 *{task_list.title}*")
-    #
-    #             if not task_list.tasks:
-    #                 lines.append("— список пуст")
-    #                 continue
-    #
-    #             for task in task_list.tasks:
-    #                 status = "✅ выполнена" if task.completed else "❌ не выполнена"
-    #                 lines.append(f"• {task.value} — {status}")
-    #
-    #                 # Сброс
-    #                 task.completed = False
-    #
-    #             lines.append("")
-    #
-    #         reports[user_id] = "\n".join(lines)
-    #
-    #     self._save()
-    #     return reports

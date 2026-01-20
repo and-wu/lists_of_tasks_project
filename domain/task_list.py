@@ -14,6 +14,8 @@ class ListOfTasks:
     owner_id: int
     remind_time: time | None = None  # ⏰ время ежедневного показа
     tasks: list[Task] = field(default_factory=list)
+    # 🔥 временно: poll текущего дня
+    active_poll_id: str | None = None
 
 
     # --- Domian Logic ---
@@ -48,10 +50,18 @@ class ListOfTasks:
     def to_dict(self) -> dict:
         return {"id": self.id, "title": self.title, "owner_id": self.owner_id,
                 "remind_time": self.remind_time.strftime("%H:%M") if self.remind_time else None,
-                "tasks": [task.to_dict() for task in self.tasks]}
+                "tasks": [task.to_dict() for task in self.tasks], "active_poll_id": self.active_poll_id}
 
     @classmethod
-    def from_dict(cls, id, title, owner_id, tasks, remind_time: str | None = None, **kwargs) -> "ListOfTasks":
+    def from_dict(cls,
+                  id,
+                  title,
+                  owner_id,
+                  tasks,
+                  remind_time: str | None = None,
+                  active_poll_id: str | None = None ,
+                  **kwargs) -> "ListOfTasks":
+
         tasks_obj = [Task.from_dict(**t) for t in tasks]
 
         parsed_remind_time: time | None = (
@@ -59,4 +69,12 @@ class ListOfTasks:
             if remind_time
             else None
         )
-        return cls(id=id, title=title, owner_id=owner_id, tasks=tasks_obj, remind_time=parsed_remind_time)
+        #return cls(id=id, title=title, owner_id=owner_id, tasks=tasks_obj, remind_time=parsed_remind_time)
+        return cls(
+            id=id,
+            title=title,
+            owner_id=owner_id,
+            tasks=tasks_obj,
+            remind_time=parsed_remind_time,
+            active_poll_id=active_poll_id
+        )
