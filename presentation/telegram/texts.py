@@ -10,7 +10,8 @@ class BotMessages:
 
     @staticmethod
     def say_hello(username: str) -> str:
-        return f"Привет {username}!\nЯ бот для ведения списков задач."
+        return (f"Привет {username}!\nЯ бот для ведения списков задач."
+                f"\nПосмотреть главное меню можно через команду /main_menu")
 
 
 @dataclass

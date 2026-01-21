@@ -179,8 +179,6 @@ async def process_remind_time(message: Message, state: FSMContext,
         await message.answer("❌ Неверный формат. Введите время как HH:MM")
         return
 
-    remind_use_case = AddRemindTimeUseCase(scheduler=reminder_scheduler)
-
     poll_use_case = CreateDailyPollUseCase(scheduler=reminder_scheduler)
 
     data = await state.get_data()
@@ -196,12 +194,6 @@ async def process_remind_time(message: Message, state: FSMContext,
             )
         except TelegramForbiddenError:
             pass
-
-    await remind_use_case.execute(
-        user_id=message.from_user.id,
-        list_id=new_list_tasks_id,
-        remind_time=remind_time
-    )
 
     await poll_use_case.execute(
         user_id=message.from_user.id,
@@ -299,4 +291,8 @@ async def cancel_delete_start(callback: CallbackQuery, service: UserService):
     await show_lists_view(callback=callback, service=service)
     await callback.answer(text=list_view.delete_action_canceled)
 
-
+@router.callback_query(lambda c: c.data == "menu:hide")
+async def hide_menu(callback: CallbackQuery):
+    """Обработчик скрытия (удаления) сообщения и клавиатуры со списком."""
+    await callback.message.delete()
+    await callback.answer("Меню скрыто 👌", show_alert=False)

@@ -1,5 +1,10 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+HIDE_MENU_BUTTON = InlineKeyboardButton(
+    text="🙈 Скрыть меню",
+    callback_data="menu:hide"
+)
+
 def get_main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -15,6 +20,9 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
                     callback_data="list:create"
                 )
             ],
+            [
+                HIDE_MENU_BUTTON
+             ]
         ]
     )
 
@@ -48,6 +56,8 @@ def get_lists_keyboard(lists) -> InlineKeyboardMarkup:
             text="⬅️ Назад в главное меню",
             callback_data="menu:main"
         )
+    ])
+    keyboard.append([HIDE_MENU_BUTTON
     ])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
