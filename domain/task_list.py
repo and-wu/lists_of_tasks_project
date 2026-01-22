@@ -16,6 +16,7 @@ class ListOfTasks:
     tasks: list[Task] = field(default_factory=list)
     # 🔥 временно: poll текущего дня
     active_poll_id: str | None = None
+    poll_voted: bool = False  # ✅ пользователь ответил на опрос
 
 
     # --- Domian Logic ---

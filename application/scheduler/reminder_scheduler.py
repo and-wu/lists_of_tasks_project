@@ -145,8 +145,8 @@ class ReminderScheduler:
         self.scheduler.add_job(
             job,
             trigger="cron",
-            hour=17,
-            minute=40,
+            hour=15,
+            minute=50,
             id="daily_tasks_reset",
             replace_existing=True
         )

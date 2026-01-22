@@ -115,14 +115,22 @@ class JsonUserRepository(IUserRepository):
 
     def reset_all_tasks(self) -> dict[int, list[dict]]:
         """
-        Возвращает данные по задачам ДО сброса
+        Сбрасывает и возвращает данные
+        ТОЛЬКО по спискам:
+        - у которых был активный poll
+        - и пользователь проголосовал
         """
-        result = {}
+        result: dict[int, list[dict]] = {}
 
         for user_id, user in self._data.items():
             user_rows = []
 
             for task_list in user.listoftasks:
+
+                # ⛔ ПРОПУСКАЕМ списки без голосования
+                if not task_list.active_poll_id or not task_list.poll_voted:
+                    continue
+
                 for task in task_list.tasks:
                     user_rows.append({
                         "username": user.username,
@@ -131,9 +139,15 @@ class JsonUserRepository(IUserRepository):
                         "completed": task.completed
                     })
 
+                    # 🔄 сбрасываем
                     task.completed = False
 
-            result[user_id] = user_rows
+                # 🔥 сбрасываем состояние poll
+                task_list.poll_voted = False
+                task_list.active_poll_id = None
+
+            if user_rows:
+                result[user_id] = user_rows
 
         self._save()
         return result
