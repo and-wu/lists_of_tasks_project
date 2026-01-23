@@ -161,3 +161,13 @@ class UserService:
         Возвращает список всех пользователей из репозитория.
         """
         return self.repo.all()
+
+    def update_list_remind_time(self, user_id: int, list_id: int, new_time: time):
+        user = self.get_user_by_id(user_id)
+
+        for task_list in user.listoftasks:
+            if task_list.id == list_id:
+                task_list.remind_time = new_time
+                break
+
+        self.save_user(user_id)

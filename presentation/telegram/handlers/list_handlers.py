@@ -296,3 +296,5 @@ async def hide_menu(callback: CallbackQuery):
     """Обработчик скрытия (удаления) сообщения и клавиатуры со списком."""
     await callback.message.delete()
     await callback.answer("Меню скрыто 👌", show_alert=False)
+
+

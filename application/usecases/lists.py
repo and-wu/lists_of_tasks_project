@@ -36,3 +36,27 @@ class CreateDailyPollUseCase:
             list_id=list_id,
             remind_time=remind_time,
         )
+
+class UpdateRemindTimeUseCase:
+    def __init__(
+        self,
+        user_service: UserService,
+        scheduler: ReminderScheduler,
+    ):
+        self.user_service = user_service
+        self.scheduler = scheduler
+
+    async def execute(self, user_id: int, list_id: int, new_time: time):
+        # 💾 сохраняем в данных
+        self.user_service.update_list_remind_time(
+            user_id=user_id,
+            list_id=list_id,
+            new_time=new_time,
+        )
+
+        # ⏰ обновляем job
+        self.scheduler.update_list_remind_time(
+            user_id=user_id,
+            list_id=list_id,
+            new_time=new_time,
+        )

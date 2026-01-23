@@ -1,3 +1,5 @@
+from datetime import date
+
 from aiogram import Bot
 from oauthlib.oauth2.rfc6749.utils import list_to_scope
 
@@ -22,9 +24,12 @@ class DailyPollService:
 
         options = [task.value for task in tasks]
 
+        today = date.today().strftime("%d.%m.%Y")
+
         poll_msg = await self.bot.send_poll(
             chat_id=user_id,
-            question=f"🕒 {listoftasks.title}\nЧто выполнено сегодня?",
+            question= (f"📅 {today}\n\n"
+                       f"🕒 {listoftasks.title}"),
             options=options,
             allows_multiple_answers=True,
             is_anonymous=False

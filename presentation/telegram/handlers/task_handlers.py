@@ -1,17 +1,21 @@
 import builtins
 import contextlib
+from datetime import time
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.user.create_user import UserService
 from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
+from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard, extra_task_menu, \
-    get_task_detail_keyboard, get_confirm_delete_task_keyboard
+    get_task_detail_keyboard, get_confirm_delete_task_keyboard, remind_manage_keyboard_with_time, \
+    remind_manage_keyboard_without_time
 from presentation.telegram.utils.fsm_cleanup import delete_fsm_prompt_message
 
 router = Router()
@@ -38,7 +42,10 @@ async def show_tasks(callback: CallbackQuery, service: UserService):
 
     text = task_view.get_list_title(task_list.title)
     await callback.message.edit_text(text=text,
-                                     reply_markup=get_tasks_keyboard(tasks=tasks, list_id=list_id))
+                                     reply_markup=get_tasks_keyboard(tasks=tasks,
+                                                                     list_id=list_id,
+                                                                     tasks_list=task_list)
+                                     )
 
     await callback.answer()  # обязательно закрываем "часики"
 
@@ -340,3 +347,200 @@ async def delete_task_no(callback: CallbackQuery, service: UserService):
                                      )
 
     await callback.answer(text=task_view.delete_action_canceled)
+
+
+@router.callback_query(lambda c: c.data.startswith("list:remind_menu:"))
+async def open_remind_menu(
+    callback: CallbackQuery,
+    service: UserService
+):
+    list_id = int(callback.data.split(":")[-1])
+    task_list = service.get_list_by_id(callback.from_user.id, list_id)
+
+    if task_list is None:
+        await callback.answer("❌ Список не найден")
+        return
+
+    # выбираем нужную клавиатуру
+    if task_list.remind_time:
+        keyboard = remind_manage_keyboard_with_time(list_id, remind_time=task_list.remind_time)
+    else:
+        keyboard = remind_manage_keyboard_without_time(list_id)
+
+    # 🔁 заменяем клавиатуру у текущего сообщения
+    await callback.message.edit_reply_markup(reply_markup=keyboard)
+    await callback.answer()
+
+@router.callback_query(lambda c: c.data and c.data.startswith(("list:remind_add:", "list:remind_edit:")))
+async def remind_time_callback(callback: CallbackQuery, state: FSMContext, service: UserService):
+    """
+    Колбек для кнопок добавления/изменения времени
+    Пользователь нажал 'Добавить время' или 'Изменить время'.
+    """
+    list_id = int(callback.data.split(":")[-1])
+    task_list = service.get_list_by_id(callback.from_user.id, list_id)
+
+    if not task_list:
+        await callback.answer("❌ Список не найден")
+        return
+
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+
+    # Сохраняем ID списка в FSM, чтобы хэндлер ввода времени знал, для какого списка ввод
+    await state.update_data(edit_list_id=list_id)
+
+    # Переводим пользователя в состояние ожидания времени
+    await state.set_state(ListStates.waiting_for_edit_remind_time)
+
+    # отправляем сообщение с инструкцией и сохраняем её message_id
+    if task_list.remind_time:
+        msg = await callback.message.answer(
+            f"Текущее время напоминания: {task_list.remind_time.strftime('%H:%M')}\n"
+            "Введите новое время в формате HH:MM"
+        )
+    else:
+        msg = await callback.message.answer(
+            "Введите время напоминания для этого списка в формате HH:MM",
+        )
+
+    await state.update_data(remind_prompt_message_id=msg.message_id)
+
+    # Закрываем всплывающее уведомление колбека
+    await callback.answer()
+
+@router.message(ListStates.waiting_for_edit_remind_time)
+async def edit_remind_time(message: Message, state: FSMContext,
+                           service: UserService, reminder_scheduler: ReminderScheduler):
+    """
+    Хэндлер для изменения времени напоминания существующего списка.
+    Ожидает ввод времени в формате HH:MM.
+    """
+    # 1️⃣ Парсим введённое время
+    try:
+        hours, minutes = map(int, message.text.split(":"))
+        new_time = time(hour=hours, minute=minutes)
+    except Exception:
+        await message.answer("❌ Неверный формат времени. Введите как HH:MM")
+        return
+
+    # 2️⃣ Берём из state id списка, который редактируем
+    data = await state.get_data()
+    list_id = data.get("edit_list_id")
+    prompt_message_id = data.get("remind_prompt_message_id")
+
+    if list_id is None:
+        await message.answer("❌ Ошибка: список не найден.")
+        await state.clear()
+        return
+
+    task_list = service.get_list_by_id(message.from_user.id, list_id)
+    if task_list is None:
+        await message.answer("❌ Ошибка: не найден список.")
+        await state.clear()
+        return
+
+    # 3️⃣ Обновляем время через ReminderScheduler
+    reminder_scheduler.update_list_remind_time(
+        user_id=message.from_user.id,
+        list_id=list_id,
+        new_time=new_time
+    )
+
+    # 4️⃣ Сохраняем новое время в объекте списка
+    task_list.remind_time = new_time
+    service.save_user(message.from_user.id)
+
+    # 5️⃣ Удаляем сообщение-инструкцию
+    if prompt_message_id:
+        try:
+            await message.bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=prompt_message_id
+            )
+        except TelegramForbiddenError:
+            pass
+    # 6️⃣ Удаляем сообщение пользователя с временем (если есть права)
+    try:
+        await message.delete()
+    except TelegramForbiddenError:
+        pass
+
+    # 7️⃣ Отправляем подтверждение
+    await message.answer(
+        f"⏰ Время напоминания для списка *{task_list.title}* изменено на {new_time.strftime('%H:%M')}",
+        reply_markup=get_tasks_keyboard(task_list.tasks, list_id, tasks_list=task_list)
+    )
+
+    # 8️⃣ Чистим state
+    await state.clear()
+
+@router.callback_query(lambda c: c.data and c.data.startswith("list:remind_remove:"))
+async def remove_remind_time(
+    callback: CallbackQuery,
+    service: UserService,
+    reminder_scheduler: ReminderScheduler
+):
+    """
+    удаляет время напоминания
+    """
+    # 1️⃣ Достаём list_id
+    list_id = int(callback.data.split(":")[-1])
+
+    # 2️⃣ Находим список (ВАЖНО: list_id может быть 0)
+    task_list = service.get_list_by_id(callback.from_user.id, list_id)
+
+    if task_list is None:
+        await callback.answer("❌ Список не найден")
+        return
+
+    # 3️⃣ Если времени и так нет
+    if not task_list.remind_time:
+        await callback.answer("⏰ У этого списка нет напоминания")
+        return
+
+    # 4️⃣ Удаляем напоминание из планировщика
+    reminder_scheduler.remove_list_reminder(
+        user_id=callback.from_user.id,
+        list_id=list_id
+    )
+
+    # 5️⃣ Чистим время в объекте списка
+    task_list.remind_time = None
+    service.save_user(callback.from_user.id)
+
+    # 6️⃣ Обновляем клавиатуру списка задач
+    await callback.message.edit_reply_markup(
+        reply_markup=get_tasks_keyboard(
+            tasks=task_list.tasks,
+            list_id=list_id,
+            tasks_list=task_list
+        )
+    )
+
+    # 7️⃣ Всплывающее подтверждение
+    await callback.answer("🗑 Время напоминания удалено")
+
+@router.callback_query(lambda c: c.data.startswith("list:remind_cancel:"))
+async def cancel_remind_edit(
+    callback: CallbackQuery,
+    service: UserService
+):
+    list_id = int(callback.data.split(":")[-1])
+    task_list = service.get_list_by_id(callback.from_user.id, list_id)
+
+    if task_list is None:
+        await callback.answer("❌ Список не найден")
+        return
+
+    await callback.message.edit_reply_markup(
+        reply_markup=get_tasks_keyboard(
+            tasks=task_list.tasks,
+            list_id=list_id,
+            tasks_list=task_list
+        )
+    )
+    await callback.answer("↩️ Отменено")
+
