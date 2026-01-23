@@ -297,4 +297,3 @@ async def hide_menu(callback: CallbackQuery):
     await callback.message.delete()
     await callback.answer("Меню скрыто 👌", show_alert=False)
 
-

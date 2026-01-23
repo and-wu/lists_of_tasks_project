@@ -21,6 +21,12 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
                 )
             ],
             [
+                InlineKeyboardButton(
+                    text="📊 Привязать Google-таблицу",
+                    callback_data="google_sheet:add"
+                )
+            ],
+            [
                 HIDE_MENU_BUTTON
              ]
         ]
