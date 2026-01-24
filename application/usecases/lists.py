@@ -26,15 +26,25 @@ class AddRemindTimeUseCase:
 
 
 class CreateDailyPollUseCase:
-    def __init__(self, scheduler: ReminderScheduler):
+    def __init__(self, scheduler: ReminderScheduler, service: UserService):
         self.scheduler = scheduler
+        self.service = service  # для сохранения времени
 
     async def execute(self, user_id: int, list_id: int, remind_time: time):
-        """Регистрируем ежедневный опрос для конкретного списка"""
+        """Регистрируем ежедневный опрос и сохраняем remind_time"""
+
+        # 1️⃣ Сохраняем remind_time в базе
+        self.service.update_list_remind_time(
+            user_id=user_id,
+            list_id=list_id,
+            new_time=remind_time
+        )
+
+        # 2️⃣ Регистрируем задачу в scheduler
         self.scheduler.schedule_poll_for_list(
             user_id=user_id,
             list_id=list_id,
-            remind_time=remind_time,
+            remind_time=remind_time
         )
 
 class UpdateRemindTimeUseCase:

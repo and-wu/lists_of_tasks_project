@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections import defaultdict
 
 from aiogram.exceptions import TelegramBadRequest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -100,40 +101,42 @@ class ReminderScheduler:
 
                 lines = ["🕒 *Ежедневный отчёт*\n"]
 
-                # 🔹 получаем пользователя
                 user = self.service.get_user_by_id(user_id)
 
-                # 🔹 Google Sheets сервис (если есть таблица)
                 sheets = None
                 if user.google_sheet_url:
                     try:
                         sheet_id = extract_sheet_id(user.google_sheet_url)
                         sheets = GoogleSheetsService(sheet_id)
-                        # 🔥 заголовок дня
                         sheets.ensure_day_header()
                     except Exception:
-                        sheets = None  # не ломаем весь job
+                        sheets = None
 
+                # 🔹 группируем задачи по спискам
+                grouped = defaultdict(list)
                 for row in rows:
-                    status = "✅" if row["completed"] else "❌"
+                    grouped[row["list_title"]].append(row)
 
-                    lines.append(
-                        f"📋 {row['list_title']}\n"
-                        f"• {row['task']} — {status}"
-                    )
+                # 🔹 выводим списки без дублирования названия
+                for list_title, tasks in grouped.items():
+                    lines.append(f"📋 *{list_title}*")
 
-                    # 🔹 пишем в Google Sheets (если сервис есть)
-                    if sheets:
-                        try:
-                            sheets.append_task(
-                                list_title=row["list_title"],
-                                task_value=row["task"],
-                                completed=row["completed"]
-                            )
-                        except Exception:
-                            pass
+                    for task in tasks:
+                        status = "✅" if task["completed"] else "❌"
+                        lines.append(f"• {task['task']} — {status}")
 
-                # 🔹 отправляем сообщение пользователю
+                        if sheets:
+                            try:
+                                sheets.append_task(
+                                    list_title=list_title,
+                                    task_value=task["task"],
+                                    completed=task["completed"]
+                                )
+                            except Exception:
+                                pass
+
+                    lines.append("")  # пустая строка между списками
+
                 try:
                     await self.bot.send_message(
                         chat_id=user_id,
@@ -147,8 +150,8 @@ class ReminderScheduler:
         self.scheduler.add_job(
             job,
             trigger="cron",
-            hour=9,
-            minute=41,
+            hour=3,
+            minute=0,
             id="daily_tasks_reset",
             replace_existing=True,
         )

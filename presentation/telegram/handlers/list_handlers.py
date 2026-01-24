@@ -1,4 +1,5 @@
 from datetime import time
+from dbm.sqlite3 import error
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
@@ -172,48 +173,66 @@ async def process_remind_decision(callback: CallbackQuery, state: FSMContext, se
 async def process_remind_time(message: Message, state: FSMContext,
                               service: UserService, reminder_scheduler: ReminderScheduler):
     """Обработчик введенного время."""
+
+    data = await state.get_data()
+
+    # Удаляем старое сообщение ошибки, если есть
+    remind_error_message_id = data.get("remind_error_message_id")
+    if remind_error_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=remind_error_message_id)
+        except TelegramForbiddenError:
+            pass
+
+    # Парсим введённое время
     try:
         hours, minutes = map(int, message.text.split(":"))
         remind_time = time(hour=hours, minute=minutes)
     except Exception:
-        await message.answer("❌ Неверный формат. Введите время как HH:MM")
-        return
-
-    poll_use_case = CreateDailyPollUseCase(scheduler=reminder_scheduler)
-
-    data = await state.get_data()
-    list_title = data["list_title"]
-    remind_prompt_message_id = data.get("remind_prompt_message_id")
-    new_list_tasks_id = data.get("new_list_tasks_id")
-
-    if remind_prompt_message_id:
+        # Удаляем сообщение пользователя
         try:
-            await message.bot.delete_message(
-                chat_id=message.chat.id,
-                message_id=remind_prompt_message_id
-            )
+            await message.delete()
         except TelegramForbiddenError:
             pass
 
+        # Сообщение об ошибке
+        error_msg = await message.answer("❌ Неверный формат. Введите время как HH:MM")
+        await state.update_data(remind_error_message_id=error_msg.message_id)
+        return  # ✅ Обязательно return, чтобы код ниже не выполнялся
+
+    # 🔹 Всё ниже выполняется только если remind_time успешно создан
+    remind_prompt_message_id = data.get("remind_prompt_message_id")
+    new_list_tasks_id = data.get("new_list_tasks_id")
+    list_title = data.get("list_title")
+
+    # Удаляем сообщение prompt
+    if remind_prompt_message_id:
+        try:
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=remind_prompt_message_id)
+        except TelegramForbiddenError:
+            pass
+
+    # Создаём напоминание
+    poll_use_case = CreateDailyPollUseCase(scheduler=reminder_scheduler, service=service)
     await poll_use_case.execute(
         user_id=message.from_user.id,
         list_id=new_list_tasks_id,
         remind_time=remind_time
     )
 
-    # удаляем сообщение пользователя с временем
+    # Удаляем сообщение пользователя
     try:
         await message.delete()
     except TelegramForbiddenError:
         pass
 
-
+    # Отправляем подтверждение
     user = service.get_user_by_id(message.from_user.id)
-    text = list_view.list_created(list_title=list_title) + "\n" + f"⏰ Напоминание: {remind_time.strftime('%H:%M')}\n\n"
+    text = list_view.list_created(list_title=list_title) + "\n"
+    text += f"⏰ Напоминание: {remind_time.strftime('%H:%M')}\n\n"
     text += list_view.lists_text_header if user.listoftasks else list_view.no_lists
 
-    await message.answer(text=text,
-                         reply_markup=get_lists_keyboard(user.listoftasks))
+    await message.answer(text=text, reply_markup=get_lists_keyboard(user.listoftasks))
 
     await state.clear()
 

@@ -1,8 +1,6 @@
 from datetime import date
 
 from aiogram import Bot
-from oauthlib.oauth2.rfc6749.utils import list_to_scope
-
 
 class DailyPollService:
     def __init__(self, bot: Bot, user_service):

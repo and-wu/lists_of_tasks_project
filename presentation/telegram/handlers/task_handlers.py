@@ -418,16 +418,36 @@ async def edit_remind_time(message: Message, state: FSMContext,
     Хэндлер для изменения времени напоминания существующего списка.
     Ожидает ввод времени в формате HH:MM.
     """
+
+    # 0️⃣ Удаляем старое сообщение ошибки (если есть)
+    data = await state.get_data()
+    remind_error_message_id = data.get("remind_error_message_id")
+    if remind_error_message_id:
+        try:
+            await message.bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=remind_error_message_id
+            )
+        except TelegramForbiddenError:
+            pass
+
     # 1️⃣ Парсим введённое время
     try:
         hours, minutes = map(int, message.text.split(":"))
         new_time = time(hour=hours, minute=minutes)
     except Exception:
-        await message.answer("❌ Неверный формат времени. Введите как HH:MM")
+        # удаляем сообщение пользователя
+        try:
+            await message.delete()
+        except TelegramForbiddenError:
+            pass
+
+        # отправляем сообщение об ошибке и сохраняем его ID
+        error_msg = await message.answer("❌ Неверный формат времени. Введите как HH:MM")
+        await state.update_data(remind_error_message_id=error_msg.message_id)
         return
 
     # 2️⃣ Берём из state id списка, который редактируем
-    data = await state.get_data()
     list_id = data.get("edit_list_id")
     prompt_message_id = data.get("remind_prompt_message_id")
 
@@ -462,6 +482,7 @@ async def edit_remind_time(message: Message, state: FSMContext,
             )
         except TelegramForbiddenError:
             pass
+
     # 6️⃣ Удаляем сообщение пользователя с временем (если есть права)
     try:
         await message.delete()
