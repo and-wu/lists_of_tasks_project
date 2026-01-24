@@ -10,6 +10,7 @@ from application.google_sheets.service import GoogleSheetsService
 from application.google_sheets.utils import extract_sheet_id
 from application.poll.daily_poll_service import DailyPollService
 from application.user.create_user import UserService
+from presentation.telegram.keyboards.extra_keyboard import get_hide_report_keyboard
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard
 from presentation.telegram.texts import ListView
 
@@ -137,7 +138,8 @@ class ReminderScheduler:
                     await self.bot.send_message(
                         chat_id=user_id,
                         text="\n".join(lines),
-                        parse_mode="Markdown"
+                        parse_mode="Markdown",
+                        reply_markup=get_hide_report_keyboard()
                     )
                 except Exception:
                     pass
@@ -145,10 +147,10 @@ class ReminderScheduler:
         self.scheduler.add_job(
             job,
             trigger="cron",
-            hour=3,
-            minute=0,
+            hour=9,
+            minute=41,
             id="daily_tasks_reset",
-            replace_existing=True
+            replace_existing=True,
         )
 
 

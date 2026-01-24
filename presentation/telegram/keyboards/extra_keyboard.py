@@ -12,3 +12,15 @@ def get_cancel_keyboard(entity: str) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+def get_hide_report_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🙈 Скрыть отчёт",
+                    callback_data="report:hide"
+                )
+            ]
+        ]
+    )

@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery, Message
 
 from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.user.create_user import UserService
-from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
+from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
 from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView

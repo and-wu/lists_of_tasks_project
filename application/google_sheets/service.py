@@ -40,8 +40,12 @@ class GoogleSheetsService:
         Добавляет информацию об одной задаче в Google Таблицу.
         Одна строка в таблице = одна задача пользователя.
         """
+
+        # Получаем вчерашнюю дату
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
         self.sheet.append_row([
-            datetime.now().strftime("%Y-%m-%d"),
+            yesterday,
             list_title,
             task_value,
             status_emoji,

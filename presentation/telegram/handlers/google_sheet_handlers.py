@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from application.user.create_user import UserService
-from presentation.telegram.keyboards.cancel_keyboard import get_cancel_keyboard
+from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
 from presentation.telegram.keyboards.list_keyboards import get_main_menu_keyboard
 from presentation.telegram.states.sheet_states import SheetStates
 from presentation.telegram.texts import TaskView, BotMessages
@@ -132,3 +132,15 @@ async def cancel_google_sheet_action(callback: CallbackQuery,state: FSMContext):
 
     # закрываем callback
     await callback.answer("Действие отменено")
+
+@router.callback_query(F.data == "report:hide")
+async def hide_daily_report(callback: CallbackQuery):
+    """
+    Скрывает сообщение с ежедневным отчётом
+    """
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+
+    await callback.answer("Отчёт скрыт")
