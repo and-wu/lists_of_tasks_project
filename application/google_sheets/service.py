@@ -3,7 +3,8 @@ import os
 
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime
+from datetime import datetime, timedelta
+
 
 class GoogleSheetsService:
     """
@@ -60,7 +61,8 @@ class GoogleSheetsService:
         ])
 
     def ensure_day_header(self):
-        today = datetime.now().strftime("%Y-%m-%d")
+        # Получаем вчерашнюю дату
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
         values = self.sheet.col_values(1)
 
@@ -70,5 +72,5 @@ class GoogleSheetsService:
                 last_date = value
                 break
 
-        if last_date != today:
-            self.append_day_header(today)
+        if last_date != yesterday:
+            self.append_day_header(yesterday)
