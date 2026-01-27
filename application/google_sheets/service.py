@@ -52,29 +52,29 @@ class GoogleSheetsService:
             "done" if completed else "missed"
         ])
 
-    def append_day_header(self, date_str: str):
+    def append_day_header(self):
         """
         Добавляет строку-заголовок нового дня
         """
+
         self.sheet.append_row([
-            date_str,
+            "",
             "📅 ОТЧЁТ ЗА ДЕНЬ",
             "",
             "",
             ""
         ])
 
-    def ensure_day_header(self):
-        # Получаем вчерашнюю дату
-        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    def append_empty_row(self) -> None:
+        """
+        Добавляет пустую строку-разделитель:
+        дата есть, остальные колонки пустые
+        """
 
-        values = self.sheet.col_values(1)
-
-        last_date = None
-        for value in reversed(values):
-            if value.strip():
-                last_date = value
-                break
-
-        if last_date != yesterday:
-            self.append_day_header(yesterday)
+        self.sheet.append_row([
+            "   ------   ",
+            "",
+            "",
+            "",
+            "",
+        ])
