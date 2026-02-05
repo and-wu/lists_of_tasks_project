@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import time, datetime
 
+from domain.enums.repeat_type import RepeatType
 from domain.tasks import Task
 
 # =============================================
@@ -12,11 +13,16 @@ class ListOfTasks:
     id: int
     title: str
     owner_id: int
-    remind_time: time | None = None  # ⏰ время ежедневного показа
+    # 🔕 напоминание может отсутствовать
+    remind_time: time | None = None # ⏰ время ежедневного показа
+    repeat_type: RepeatType | None = None
+    run_date: datetime | None = None
     tasks: list[Task] = field(default_factory=list)
     # 🔥 временно: poll текущего дня
     active_poll_id: str | None = None
     poll_voted: bool = False  # ✅ пользователь ответил на опрос
+
+
 
 
     # --- Domian Logic ---
@@ -48,6 +54,21 @@ class ListOfTasks:
 
         return max_id
 
+    def has_reminder(self) -> bool:
+        return self.remind_time is not None and self.repeat_type is not None
+
+    def is_one_time(self) -> bool:
+        return self.repeat_type == RepeatType.ONCE
+
+    def is_valid_reminder(self) -> bool:
+        if not self.has_reminder():
+            return False
+
+        if self.repeat_type == RepeatType.ONCE:
+            return self.run_date is not None
+
+        return True
+
     def to_dict(self) -> dict:
         return {"id": self.id, "title": self.title, "owner_id": self.owner_id,
                 "remind_time": self.remind_time.strftime("%H:%M") if self.remind_time else None,
@@ -70,7 +91,7 @@ class ListOfTasks:
             if remind_time
             else None
         )
-        #return cls(id=id, title=title, owner_id=owner_id, tasks=tasks_obj, remind_time=parsed_remind_time)
+
         return cls(
             id=id,
             title=title,

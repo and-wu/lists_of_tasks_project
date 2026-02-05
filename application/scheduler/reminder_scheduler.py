@@ -216,44 +216,22 @@
 
 import logging
 from collections import defaultdict
-from datetime import time
-from enum import Enum
+from datetime import time, datetime
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 
 from application.google_sheets.service import GoogleSheetsService
 from application.google_sheets.utils import extract_sheet_id
 from application.poll.daily_poll_service import DailyPollService
+from application.scheduler.job_registry import JobRegistry
 from application.user.create_user import UserService
+from domain.enums.repeat_type import RepeatType
 from presentation.telegram.keyboards.extra_keyboard import get_hide_report_keyboard
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard
-
-
-# =========================================================
-# Job registry
-# =========================================================
-
-class JobType(Enum):
-    LIST_REMINDER = "list_reminder"
-    LIST_POLL = "list_poll"
-    DAILY_RESET = "daily_reset"
-
-
-class JobRegistry:
-    @staticmethod
-    def list_reminder(user_id: int, list_id: int) -> str:
-        return f"{JobType.LIST_REMINDER.value}:{user_id}:{list_id}"
-
-    @staticmethod
-    def list_poll(user_id: int, list_id: int) -> str:
-        return f"{JobType.LIST_POLL.value}:{user_id}:{list_id}"
-
-    @staticmethod
-    def daily_reset() -> str:
-        return JobType.DAILY_RESET.value
-
 
 # =========================================================
 # APScheduler jobs
@@ -394,47 +372,114 @@ class ReminderScheduler:
     # List reminder
     # -------------------------
 
-    def schedule_list_reminder(
-        self,
-        user_id: int,
-        list_id: int,
-        remind_time: time,
+    # Основной метод (create / update)
+    def upsert_list_reminder(
+            self,
+            user_id: int,
+            list_id: int,
+            remind_time: time,
+            repeat: RepeatType,
+            run_date: datetime | None = None,
     ):
-        self.scheduler.add_job(
-            send_list_reminder,
-            trigger="cron",
-            hour=remind_time.hour,
-            minute=remind_time.minute,
-            id=JobRegistry.list_reminder(user_id, list_id),
-            replace_existing=True,
-            args=[self.bot, self.service, user_id, list_id],
+        """
+        Создаёт или обновляет напоминание для списка.
+        """
+
+        job_id = JobRegistry.list_reminder(user_id, list_id)
+
+        trigger = self._build_trigger(
+            remind_time=remind_time,
+            repeat=repeat,
+            run_date=run_date,
         )
 
+        self.scheduler.add_job(
+            send_list_reminder,
+            trigger=trigger,
+            args=[self.bot, user_id, list_id, self.service],
+            id=job_id,
+            replace_existing=True,  # 🔑 ключевая строка
+        )
+
+    # Удаление напоминания
     def remove_list_reminder(self, user_id: int, list_id: int):
         self._remove_job(JobRegistry.list_reminder(user_id, list_id))
+
+    # Смена только времени
+    def update_remind_time(
+            self,
+            user_id: int,
+            list_id: int,
+            new_time: time,
+            repeat: RepeatType,
+            run_date: datetime | None = None,
+    ):
+        self.upsert_list_reminder(
+            user_id=user_id,
+            list_id=list_id,
+            remind_time=new_time,
+            repeat=repeat,
+            run_date=run_date,
+        )
+
+    # Внутренний билдер триггера
+    def _build_trigger(
+            self,
+            remind_time: time,
+            repeat: RepeatType,
+            run_date: datetime | None,
+    ):
+        if repeat == RepeatType.ONCE:
+            if not run_date:
+                raise ValueError("run_date обязателен для ONCE")
+            return DateTrigger(run_date=run_date)
+
+        day_of_week = None
+
+        if repeat == RepeatType.DAILY:
+            day_of_week = "*"
+        elif repeat == RepeatType.WEEKDAYS:
+            day_of_week = "mon-fri"
+        elif repeat == RepeatType.WEEKENDS:
+            day_of_week = "sat,sun"
+
+        return CronTrigger(
+            hour=remind_time.hour,
+            minute=remind_time.minute,
+            day_of_week=day_of_week,
+        )
 
     # -------------------------
     # Polls
     # -------------------------
 
-    def schedule_poll_for_list(
+    def upsert_list_poll(
         self,
         user_id: int,
         list_id: int,
         remind_time: time,
+        repeat: RepeatType,
+        run_date: datetime | None = None,
     ):
-        logging.info(
-            f"[SCHEDULER] poll registered user={user_id}, list={list_id}, time={remind_time}"
+        job_id = JobRegistry.list_poll(user_id, list_id)
+
+        trigger = self._build_trigger(
+            remind_time=remind_time,
+            repeat=repeat,
+            run_date=run_date,
         )
 
+        async def job():
+            await self.poll_service.send_daily_poll(
+                user_id=user_id,
+                list_id=list_id
+            )
+
         self.scheduler.add_job(
-            send_poll,
-            trigger="cron",
-            hour=remind_time.hour,
-            minute=remind_time.minute,
-            id=JobRegistry.list_poll(user_id, list_id),
+            job,
+            trigger=trigger,
+            id=job_id,
             replace_existing=True,
-            args=[self.poll_service, user_id, list_id],
         )
 
     def remove_poll_for_list(self, user_id: int, list_id: int):
@@ -444,7 +489,7 @@ class ReminderScheduler:
     # Daily reset
     # -------------------------
 
-    def schedule_daily_reset(self, hour: int = 11, minute: int = 51):
+    def schedule_daily_reset(self, hour: int = 16, minute: int = 35):
         self.scheduler.add_job(
             send_daily_reset,
             trigger="cron",
@@ -462,12 +507,30 @@ class ReminderScheduler:
     def schedule_all_polls_on_startup(self):
         for user in self.service.get_all_users():
             for task_list in user.listoftasks:
-                if task_list.remind_time:
-                    self.schedule_poll_for_list(
-                        user_id=user.id,
-                        list_id=task_list.id,
-                        remind_time=task_list.remind_time,
-                    )
+
+                # ❌ нет напоминания вообще
+                if not task_list.remind_time:
+                    continue
+
+                # ❌ пользователь не выбрал режим
+                if not task_list.repeat_type:
+                    continue
+
+                # ❌ одноразовое и уже прошло
+                if (
+                        task_list.repeat_type == RepeatType.ONCE
+                        and task_list.run_date
+                        and task_list.run_date < datetime.now()
+                ):
+                    continue
+
+                self.upsert_list_poll(
+                    user_id=user.id,
+                    list_id=task_list.id,
+                    remind_time=task_list.remind_time,
+                    repeat=task_list.repeat_type,
+                    run_date=task_list.run_date,
+                )
 
     def schedule_new_list(
         self,
@@ -476,7 +539,7 @@ class ReminderScheduler:
         remind_time: time | None,
     ):
         if remind_time:
-            self.schedule_poll_for_list(user_id, list_id, remind_time)
+            self.upsert_list_poll(user_id, list_id, remind_time)
 
     def update_list_remind_time(
         self,
@@ -485,7 +548,7 @@ class ReminderScheduler:
         new_time: time,
     ):
         self.remove_poll_for_list(user_id, list_id)
-        self.schedule_poll_for_list(user_id, list_id, new_time)
+        self.upsert_list_poll(user_id, list_id, new_time)
 
     # -------------------------
     # Internal
