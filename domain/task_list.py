@@ -14,7 +14,7 @@ class ListOfTasks:
     title: str
     owner_id: int
     # 🔕 напоминание может отсутствовать
-    remind_time: time | None = None # ⏰ время ежедневного показа
+    remind_time: time | None = None # ⏰ время показа
     repeat_type: RepeatType | None = None
     run_date: datetime | None = None
     tasks: list[Task] = field(default_factory=list)
@@ -72,6 +72,12 @@ class ListOfTasks:
     def to_dict(self) -> dict:
         return {"id": self.id, "title": self.title, "owner_id": self.owner_id,
                 "remind_time": self.remind_time.strftime("%H:%M") if self.remind_time else None,
+                "repeat_type": self.repeat_type.value if self.repeat_type else None,
+                "run_date": (
+                    self.run_date.isoformat()
+                    if self.run_date
+                    else None
+                ),
                 "tasks": [task.to_dict() for task in self.tasks], "active_poll_id": self.active_poll_id}
 
     @classmethod
@@ -81,6 +87,8 @@ class ListOfTasks:
                   owner_id,
                   tasks,
                   remind_time: str | None = None,
+                  repeat_type: str | None = None,
+                  run_date: str | None = None,
                   active_poll_id: str | None = None ,
                   **kwargs) -> "ListOfTasks":
 
@@ -92,11 +100,25 @@ class ListOfTasks:
             else None
         )
 
+        parsed_repeat_type = (
+            RepeatType(repeat_type)
+            if repeat_type
+            else None
+        )
+
+        parsed_run_date = (
+            datetime.fromisoformat(run_date)
+            if run_date
+            else None
+        )
+
         return cls(
             id=id,
             title=title,
             owner_id=owner_id,
             tasks=tasks_obj,
             remind_time=parsed_remind_time,
+            repeat_type=parsed_repeat_type,
+            run_date=parsed_run_date,
             active_poll_id=active_poll_id
         )
