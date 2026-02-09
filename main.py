@@ -13,6 +13,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from application.poll.daily_poll_service import DailyPollService
 from application.scheduler.reminder_scheduler import ReminderScheduler
+from application.usecases.sync_list_reminder import SyncListReminderWithSchedulerUseCase
+from application.usecases.update_list_reminder_settings import UpdateListReminderSettingsUseCase
 from application.user.create_user import UserService
 from infra.factory import create_repository, DBType
 
@@ -54,8 +56,13 @@ async def start():
         poll_service=poll_service,
     )
 
-    # Регистрируем все существующие списки с напоминаниями
-    reminder_scheduler.schedule_all_polls_on_startup()
+    # Создаём use cases
+    update_reminder_uc = UpdateListReminderSettingsUseCase(user_service=service, scheduler=reminder_scheduler)
+    sync_use_case = SyncListReminderWithSchedulerUseCase(user_service=service,scheduler=reminder_scheduler)
+
+    sync_use_case.execute()
+
+    # системная задача
     reminder_scheduler.schedule_daily_reset()
 
 
@@ -63,6 +70,8 @@ async def start():
     dp["reminder_scheduler"] = reminder_scheduler
     dp["user_service"] = service
     dp["poll_service"] = poll_service
+    dp["update_reminder_uc"] = update_reminder_uc
+    dp["sync_use_case"] = sync_use_case
 
     dp.include_router(commands_router)
     dp.include_router(list_callbacks_router)

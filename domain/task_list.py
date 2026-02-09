@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import time, datetime
 
+from domain.enums.notification_type import NotificationType
 from domain.enums.repeat_type import RepeatType
 from domain.tasks import Task
 
@@ -17,6 +18,7 @@ class ListOfTasks:
     remind_time: time | None = None # ⏰ время показа
     repeat_type: RepeatType | None = None
     run_date: datetime | None = None
+    notification_type: NotificationType | None = None
     tasks: list[Task] = field(default_factory=list)
     # 🔥 временно: poll текущего дня
     active_poll_id: str | None = None
@@ -78,6 +80,7 @@ class ListOfTasks:
                     if self.run_date
                     else None
                 ),
+                "notification_type": self.notification_type.value if self.notification_type else None,
                 "tasks": [task.to_dict() for task in self.tasks], "active_poll_id": self.active_poll_id}
 
     @classmethod
@@ -89,6 +92,7 @@ class ListOfTasks:
                   remind_time: str | None = None,
                   repeat_type: str | None = None,
                   run_date: str | None = None,
+                  notification_type: str | None = None,
                   active_poll_id: str | None = None ,
                   **kwargs) -> "ListOfTasks":
 
@@ -112,6 +116,12 @@ class ListOfTasks:
             else None
         )
 
+        parser_notification_type = (
+            NotificationType(notification_type)
+            if notification_type
+            else None
+        )
+
         return cls(
             id=id,
             title=title,
@@ -120,5 +130,6 @@ class ListOfTasks:
             remind_time=parsed_remind_time,
             repeat_type=parsed_repeat_type,
             run_date=parsed_run_date,
+            notification_type=parser_notification_type,
             active_poll_id=active_poll_id
         )

@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from application.scheduler.reminder_scheduler import ReminderScheduler
+from application.usecases.update_list_reminder_settings import UpdateListReminderSettingsUseCase
 from application.user.create_user import UserService
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
 from presentation.telegram.states.list_states import ListStates
@@ -413,7 +414,7 @@ async def remind_time_callback(callback: CallbackQuery, state: FSMContext, servi
 
 @router.message(ListStates.waiting_for_edit_remind_time)
 async def edit_remind_time(message: Message, state: FSMContext,
-                           service: UserService, reminder_scheduler: ReminderScheduler):
+                           service: UserService, update_reminder_uc: UpdateListReminderSettingsUseCase):
     """
     Хэндлер для изменения времени напоминания существующего списка.
     Ожидает ввод времени в формате HH:MM.
@@ -462,16 +463,19 @@ async def edit_remind_time(message: Message, state: FSMContext,
         await state.clear()
         return
 
-    # 3️⃣ Обновляем время через ReminderScheduler
-    reminder_scheduler.update_list_remind_time(
-        user_id=message.from_user.id,
-        list_id=list_id,
-        new_time=new_time
-    )
+    # 3️⃣ Обновляем напоминание через use case
+    try:
+        task_list = await update_reminder_uc.execute(
+            user_id=message.from_user.id,
+            list_id=list_id,
+            remind_time=new_time
+            # repeat_type и run_date не передаём — останутся прежними
+        )
+    except ValueError as e:
+        await message.answer(f"❌ Ошибка: {e}")
+        await state.clear()
+        return
 
-    # 4️⃣ Сохраняем новое время в объекте списка
-    task_list.remind_time = new_time
-    service.save_user(message.from_user.id)
 
     # 5️⃣ Удаляем сообщение-инструкцию
     if prompt_message_id:
