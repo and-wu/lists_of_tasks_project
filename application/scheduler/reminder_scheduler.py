@@ -203,6 +203,7 @@ class ReminderScheduler:
     # -------------------------
     def _build_trigger(self, task_list: ListOfTasks):
         if task_list.repeat_type == RepeatType.ONCE:
+            print(task_list.run_date)
             if not task_list.run_date:
                 raise ValueError("run_date обязателен для ONCE")
             return DateTrigger(run_date=task_list.run_date)
