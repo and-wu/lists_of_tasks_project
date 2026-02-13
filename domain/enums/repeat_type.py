@@ -6,3 +6,4 @@ class RepeatType(Enum):
     DAILY = "daily"
     WEEKDAYS = "weekdays"
     WEEKENDS = "weekends"
+    CUSTOM = "custom"

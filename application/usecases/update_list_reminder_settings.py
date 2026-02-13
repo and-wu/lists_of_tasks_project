@@ -28,7 +28,8 @@ class UpdateListReminderSettingsUseCase:
         remind_time: Optional[time] = None,
         repeat_type: Optional[RepeatType] = None,
         run_date: Optional[datetime] = None,
-        notification_type: NotificationType | None = None
+        notification_type: NotificationType | None = None,
+        week_days: list[int] | None = None
     ) -> ListOfTasks:
         # Получаем список
         task_list = self.user_service.get_list_by_id(user_id, list_id)
@@ -48,6 +49,9 @@ class UpdateListReminderSettingsUseCase:
 
         if notification_type is not None:
             task_list.notification_type = notification_type
+
+        if week_days is not None:
+            task_list.week_days = week_days
 
         # Сохраняем изменения
         self.user_service.save_user(user_id)

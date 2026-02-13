@@ -14,11 +14,14 @@ class ListOfTasks:
     id: int
     title: str
     owner_id: int
+
     # 🔕 напоминание может отсутствовать
     remind_time: time | None = None # ⏰ время показа
     repeat_type: RepeatType | None = None
     run_date: datetime | None = None
     notification_type: NotificationType | None = None
+    week_days: list[int] | None = None
+
     tasks: list[Task] = field(default_factory=list)
     # 🔥 временно: poll текущего дня
     active_poll_id: str | None = None
@@ -69,10 +72,34 @@ class ListOfTasks:
         if self.repeat_type == RepeatType.ONCE:
             return self.run_date is not None
 
+        if self.repeat_type == RepeatType.CUSTOM:
+            return bool(self.week_days)
+
         return True
 
+    def get_day_of_week_expression(self) -> str | None:
+        if not self.repeat_type:
+            return None
+
+        if self.repeat_type == RepeatType.DAILY:
+            return "*"
+
+        if self.repeat_type == RepeatType.WEEKDAYS:
+            return "mon-fri"
+
+        if self.repeat_type == RepeatType.WEEKENDS:
+            return "sat,sun"
+
+        if self.repeat_type == RepeatType.CUSTOM and self.week_days:
+            day_map = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+            return ",".join(day_map[d] for d in sorted(self.week_days))
+
+        return None
+
     def to_dict(self) -> dict:
-        return {"id": self.id, "title": self.title, "owner_id": self.owner_id,
+        return {"id": self.id,
+                "title": self.title,
+                "owner_id": self.owner_id,
                 "remind_time": self.remind_time.strftime("%H:%M") if self.remind_time else None,
                 "repeat_type": self.repeat_type.value if self.repeat_type else None,
                 "run_date": (
@@ -81,7 +108,9 @@ class ListOfTasks:
                     else None
                 ),
                 "notification_type": self.notification_type.value if self.notification_type else None,
-                "tasks": [task.to_dict() for task in self.tasks], "active_poll_id": self.active_poll_id}
+                "week_days": self.week_days,
+                "tasks": [task.to_dict() for task in self.tasks],
+                "active_poll_id": self.active_poll_id}
 
     @classmethod
     def from_dict(cls,
@@ -93,6 +122,7 @@ class ListOfTasks:
                   repeat_type: str | None = None,
                   run_date: str | None = None,
                   notification_type: str | None = None,
+                  week_days: list[int] | None = None,
                   active_poll_id: str | None = None ,
                   **kwargs) -> "ListOfTasks":
 
@@ -122,6 +152,12 @@ class ListOfTasks:
             else None
         )
 
+        parsed_week_days: list[int] | None = (
+            sorted(week_days)
+            if week_days
+            else None
+        )
+
         return cls(
             id=id,
             title=title,
@@ -131,5 +167,6 @@ class ListOfTasks:
             repeat_type=parsed_repeat_type,
             run_date=parsed_run_date,
             notification_type=parser_notification_type,
+            week_days=parsed_week_days,
             active_poll_id=active_poll_id
         )

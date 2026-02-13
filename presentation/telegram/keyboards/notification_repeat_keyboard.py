@@ -53,6 +53,12 @@ def get_repeat_type_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(
+                text="🗓 Определённые дни недели",
+                callback_data="repeat:custom"
+            )
+        ],
+        [
+            InlineKeyboardButton(
                 text="1️⃣ Один раз",
                 callback_data="repeat:once"
             )

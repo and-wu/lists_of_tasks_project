@@ -202,17 +202,13 @@ class ReminderScheduler:
     # Trigger builder
     # -------------------------
     def _build_trigger(self, task_list: ListOfTasks):
+
         if task_list.repeat_type == RepeatType.ONCE:
-            print(task_list.run_date)
             if not task_list.run_date:
                 raise ValueError("run_date обязателен для ONCE")
             return DateTrigger(run_date=task_list.run_date)
 
-        day_of_week = {
-            RepeatType.DAILY: "*",
-            RepeatType.WEEKDAYS: "mon-fri",
-            RepeatType.WEEKENDS: "sat,sun",
-        }.get(task_list.repeat_type)
+        day_of_week = task_list.get_day_of_week_expression()
 
         return CronTrigger(
             hour=task_list.remind_time.hour,

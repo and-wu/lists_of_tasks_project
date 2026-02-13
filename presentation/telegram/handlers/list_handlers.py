@@ -15,6 +15,7 @@ from domain.enums.repeat_type import RepeatType
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
 from presentation.telegram.keyboards.notification_repeat_keyboard import get_notification_type_keyboard, \
     get_repeat_type_keyboard
+from presentation.telegram.keyboards.weekdays_keyboard import get_weekdays_keyboard
 from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.texts import ListView
 from presentation.telegram.keyboards.list_keyboards import (
@@ -219,6 +220,19 @@ async def process_repeat_type(callback: CallbackQuery, state: FSMContext):
     # Сохраняем в state
     await state.update_data(repeat_type=repeat_type)
 
+    # 🔥 ЕСЛИ CUSTOM — показываем выбор дней
+    if repeat_type == RepeatType.CUSTOM:
+        await state.update_data(selected_days=[])
+
+        await callback.message.edit_text(
+            "🗓 Выберите дни недели:",
+            reply_markup=get_weekdays_keyboard([])
+        )
+
+        await callback.answer()
+        return
+
+    # ---- Остальная логика для всех остальных типов ----
     # Теперь просим ввести время
     data = await state.get_data()
     notification_type = data.get("notification_type")
@@ -344,6 +358,7 @@ async def process_remind_time(message: Message,
     list_title = data.get("list_title")
     notification_type = data.get("notification_type")
     repeat_type = data.get("repeat_type")
+    week_days = data.get("week_days")
 
     # Удаляем сообщение бота с просьбой ввести время
     try:
@@ -387,7 +402,8 @@ async def process_remind_time(message: Message,
                 list_id=list_id,
                 remind_time=remind_time,
                 repeat_type=repeat_type,
-                notification_type=notification_type
+                notification_type=notification_type,
+                week_days=week_days
             )
         except ValueError as e:
             await message.answer(f"❌ Ошибка: {e}")
