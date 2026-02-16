@@ -1,17 +1,16 @@
 from datetime import time, datetime
-from dbm.sqlite3 import error
 
 from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from application.scheduler.reminder_scheduler import ReminderScheduler
-from application.usecases.lists import CreateNewListUseCase, AddRemindTimeUseCase, CreateDailyPollUseCase
+from application.usecases.lists import CreateNewListUseCase
 from application.usecases.update_list_reminder_settings import UpdateListReminderSettingsUseCase
 from application.user.create_user import UserService
 from domain.enums.notification_type import NotificationType
 from domain.enums.repeat_type import RepeatType
+from presentation.telegram.keyboards.calendar_keyboard import get_calendar_keyboard
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
 from presentation.telegram.keyboards.notification_repeat_keyboard import get_notification_type_keyboard, \
     get_repeat_type_keyboard
@@ -145,7 +144,7 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
 
     # 🆕 Предлагаем выбрать тип уведомлений
     await message.answer(
-        text=f"✅ Список *   {list_title}* создан!\n\n"
+        text=f"✅ Список *{list_title}* создан!\n\n"
              "Выберите тип уведомлений:",
         reply_markup=get_notification_type_keyboard(),
         parse_mode="Markdown"
@@ -219,6 +218,21 @@ async def process_repeat_type(callback: CallbackQuery, state: FSMContext):
 
     # Сохраняем в state
     await state.update_data(repeat_type=repeat_type)
+
+    # 🔥 Если пользователь выбрал "Один или несколько раз" — показываем календарь
+    if repeat_type == RepeatType.ONCE:
+        now = datetime.now()
+        # Сбрасываем выбранные даты и сохраняем текущий месяц/год
+        await state.update_data(selected_dates=[], calendar_year=now.year, calendar_month=now.month)
+
+        await callback.message.edit_text(
+            "🗓 Выберите дату/даты для напоминания:",
+            reply_markup=get_calendar_keyboard(now.year, now.month, [])
+        )
+
+        await state.set_state(ListStates.waiting_for_custom_dates)
+        await callback.answer()
+        return
 
     # 🔥 ЕСЛИ CUSTOM — показываем выбор дней
     if repeat_type == RepeatType.CUSTOM:
@@ -313,195 +327,359 @@ async def process_remind_decision(callback: CallbackQuery, state: FSMContext, se
 
     await state.set_state(ListStates.waiting_for_remind_time)
 
-
-# Модифицируем существующий обработчик ввода времени
+# обработчик ввода времени
 @router.message(ListStates.waiting_for_remind_time)
-async def process_remind_time(message: Message,
-                              state: FSMContext,
-                              service: UserService,
-                              update_reminder_uc: UpdateListReminderSettingsUseCase
-                              ):
-    """
-    Обрабатывает ввод времени для уведомлений.
-    """
-    # Парсим время
-    try:
-        hours, minutes = map(int, message.text.split(":"))
-        remind_time = time(hour=hours, minute=minutes)
-    except Exception:
-        try:
-            await message.delete()
-        except TelegramForbiddenError:
-            pass
-
-        error_msg = await message.answer(
-            "❌ Неверный формат времени. Введите как HH:MM"
-        )
-        await state.update_data(remind_error_message_id=error_msg.message_id)
-        return
-
-    # Получаем данные из state
-    data = await state.get_data()
-    remind_prompt_message_id = data.get("remind_prompt_message_id")
-
-    # удаляем старый вопрос
-    if remind_prompt_message_id:
-        try:
-            await message.bot.delete_message(
-                chat_id=message.chat.id,
-                message_id=remind_prompt_message_id
-            )
-        except Exception:
-            pass
-
-    list_id = data.get("list_id")
-    list_title = data.get("list_title")
-    notification_type = data.get("notification_type")
-    repeat_type = data.get("repeat_type")
-    week_days = data.get("week_days")
-
-    # Удаляем сообщение бота с просьбой ввести время
-    try:
-        await message.delete()
-        time_prompt_id = data.get("time_prompt_message_id")
-        if time_prompt_id:
-            await message.bot.delete_message(
-                chat_id=message.chat.id,
-                message_id=time_prompt_id
-            )
-    except TelegramForbiddenError:
-        pass
-
-    # Если одноразовое напоминание — просим ввести дату
-    if repeat_type == RepeatType.ONCE:
-        await state.update_data(remind_time=remind_time)
-
-        date_prompt = await message.answer(
-            "📅 Введите дату в формате ДД.ММ.ГГГГ\n"
-            "Например: 15.02.2026"
-        )
-
-        await state.update_data(
-            date_prompt_message_id=date_prompt.message_id
-        )
-
-        await state.set_state(ListStates.waiting_for_run_date)
-
-        try:
-            await message.delete()
-        except TelegramForbiddenError:
-            pass
-
-        return
-
-    else:
-        # ✅ Используем use case напрямую
-        try:
-            task_list = await update_reminder_uc.execute(
-                user_id=message.from_user.id,
-                list_id=list_id,
-                remind_time=remind_time,
-                repeat_type=repeat_type,
-                notification_type=notification_type,
-                week_days=week_days
-            )
-        except ValueError as e:
-            await message.answer(f"❌ Ошибка: {e}")
-            await state.clear()
-            return
-
-        # Формируем текст подтверждения
-        repeat_text = {
-            RepeatType.DAILY: "ежедневно",
-            RepeatType.WEEKDAYS: "по будням",
-            RepeatType.WEEKENDS: "по выходным",
-            RepeatType.ONCE: "один раз"
-        }.get(repeat_type, "")
-
-        notification_text = "📊 Опрос" if notification_type == "poll" else "⏰ Напоминание"
-
-        user = service.get_user_by_id(message.from_user.id)
-
-        await message.answer(
-            f"✅ {notification_text} для списка *{list_title}* установлено!\n"
-            f"🕐 Время: {remind_time.strftime('%H:%M')}\n"
-            f"🔁 Периодичность: {repeat_text}",
-            parse_mode="Markdown",
-            reply_markup=get_lists_keyboard(user.listoftasks)
-        )
-
-    await state.clear()
-
-@router.message(ListStates.waiting_for_run_date)
-async def process_run_date(
+async def process_remind_time(
     message: Message,
     state: FSMContext,
     service: UserService,
     update_reminder_uc: UpdateListReminderSettingsUseCase
 ):
     """
-        Обрабатывает ввод даты для одноразового уведомления/опроса
+    Обрабатывает ввод времени для уведомлений.
     """
 
+    # ------------------ 1️⃣ Парсим время ------------------
     try:
-        selected_date = datetime.strptime(message.text, "%d.%m.%Y").date()
+        hours, minutes = map(int, message.text.split(":"))
+        remind_time = time(hour=hours, minute=minutes)
     except ValueError:
-        await message.answer("❌ Неверный формат даты. Используйте ДД.ММ.ГГГГ")
+        await _handle_time_error(message, state)
         return
 
     data = await state.get_data()
 
-    prompt_id = data.get("date_prompt_message_id")
+    list_id = data["list_id"]
+    list_title = data["list_title"]
+    notification_type = data["notification_type"]
+    repeat_type = data["repeat_type"]
+    week_days = data.get("week_days")
+    chosen_dates = data.get("chosen_dates")
 
-    remind_time = data.get("remind_time")
-    list_id = data.get("list_id")
-    list_title = data.get("list_title")
-    notification_type = data.get("notification_type")
+    await _cleanup_time_messages(message, data)
 
-    # объединяем дату и время
-    run_date = datetime.combine(selected_date, remind_time)
+    # ------------------ 2️⃣ Формируем run_dates если ONCE ------------------
+    run_dates = None
 
-    # удаляем сообщение бота с просьбой ввести дату
-    if prompt_id:
-        try:
-            await message.bot.delete_message(
-                chat_id=message.chat.id,
-                message_id=prompt_id
+    if chosen_dates:
+        run_dates = [
+            datetime(
+                year=int(date_str.split("-")[0]),
+                month=int(date_str.split("-")[1]),
+                day=int(date_str.split("-")[2]),
+                hour=remind_time.hour,
+                minute=remind_time.minute
             )
-        except Exception:
-            pass
+            for date_str in chosen_dates
+        ]
 
+        repeat_type = RepeatType.ONCE
+
+    # ------------------ 3️⃣ Вызываем use case один раз ------------------
     try:
-        await update_reminder_uc.execute(
+        task_list = await update_reminder_uc.execute(
             user_id=message.from_user.id,
             list_id=list_id,
             remind_time=remind_time,
-            repeat_type=RepeatType.ONCE,
+            repeat_type=repeat_type,
+            run_dates=run_dates,
             notification_type=notification_type,
-            run_date=run_date  # 👈 передаём
+            week_days=week_days
         )
     except ValueError as e:
         await message.answer(f"❌ Ошибка: {e}")
         await state.clear()
         return
 
-
-    user = service.get_user_by_id(message.from_user.id)
-
-    await message.answer(
-        f"✅ Напоминание для списка *{list_title}* установлено!\n"
-        f"📅 Дата: {selected_date.strftime('%d.%m.%Y')}\n"
-        f"🕐 Время: {remind_time.strftime('%H:%M')}",
-        parse_mode="Markdown",
-        reply_markup=get_lists_keyboard(user.listoftasks)
+    # ------------------ 4️⃣ Отправляем подтверждение ------------------
+    await _send_success_message(
+        message=message,
+        service=service,
+        task_list=task_list,
+        list_title=list_title,
+        remind_time=remind_time,
+        repeat_type=repeat_type,
+        chosen_dates=chosen_dates,
+        notification_type=notification_type
     )
 
+    await state.clear()
+
+# очистка времени
+async def _handle_time_error(message: Message, state: FSMContext):
     try:
         await message.delete()
     except TelegramForbiddenError:
         pass
 
-    await state.clear()
+    error_msg = await message.answer(
+        "❌ Неверный формат времени. Введите как HH:MM"
+    )
+
+    await state.update_data(remind_error_message_id=error_msg.message_id)
+
+# очистка сообщений
+async def _cleanup_time_messages(message: Message, data: dict):
+    try:
+        await message.delete()
+    except TelegramForbiddenError:
+        pass
+
+    for key in ("remind_prompt_message_id", "time_prompt_message_id"):
+        msg_id = data.get(key)
+        if msg_id:
+            try:
+                await message.bot.delete_message(
+                    chat_id=message.chat.id,
+                    message_id=msg_id
+                )
+            except Exception:
+                pass
+
+# сообщение об успехе
+async def _send_success_message(
+    message: Message,
+    service: UserService,
+    task_list,
+    list_title: str,
+    remind_time: time,
+    repeat_type: RepeatType,
+    chosen_dates: list | None,
+    notification_type: str
+):
+    repeat_text = {
+        RepeatType.DAILY: "ежедневно",
+        RepeatType.WEEKDAYS: "по будням",
+        RepeatType.WEEKENDS: "по выходным",
+        RepeatType.ONCE: "выбранные даты",
+        RepeatType.CUSTOM: "выбранные дни недели"
+    }.get(repeat_type, "")
+
+    notification_text = "📊 Опрос" if notification_type == "poll" else "⏰ Напоминание"
+
+    user = service.get_user_by_id(message.from_user.id)
+
+    if chosen_dates:
+        dates_text = ", ".join(sorted(chosen_dates))
+        text = (
+            f"✅ {notification_text} для списка *{list_title}* установлено!\n"
+            f"🕐 Время: {remind_time.strftime('%H:%M')}\n"
+            f"📅 Даты: {dates_text}"
+        )
+    else:
+        text = (
+            f"✅ {notification_text} для списка *{list_title}* установлено!\n"
+            f"🕐 Время: {remind_time.strftime('%H:%M')}\n"
+            f"🔁 Периодичность: {repeat_text}"
+        )
+
+    await message.answer(
+        text,
+        parse_mode="Markdown",
+        reply_markup=get_lists_keyboard(user.listoftasks)
+    )
+# Модифицируем существующий обработчик ввода времени
+# @router.message(ListStates.waiting_for_remind_time)
+# async def process_remind_time(message: Message,
+#                               state: FSMContext,
+#                               service: UserService,
+#                               update_reminder_uc: UpdateListReminderSettingsUseCase
+#                               ):
+#     """
+#     Обрабатывает ввод времени для уведомлений.
+#     """
+#     # Парсим время
+#     try:
+#         hours, minutes = map(int, message.text.split(":"))
+#         remind_time = time(hour=hours, minute=minutes)
+#     except Exception:
+#         try:
+#             await message.delete()
+#         except TelegramForbiddenError:
+#             pass
+#
+#         error_msg = await message.answer(
+#             "❌ Неверный формат времени. Введите как HH:MM"
+#         )
+#         await state.update_data(remind_error_message_id=error_msg.message_id)
+#         return
+#
+#     # Получаем данные из state
+#     data = await state.get_data()
+#     remind_prompt_message_id = data.get("remind_prompt_message_id")
+#
+#     # удаляем старый вопрос
+#     if remind_prompt_message_id:
+#         try:
+#             await message.bot.delete_message(
+#                 chat_id=message.chat.id,
+#                 message_id=remind_prompt_message_id
+#             )
+#         except Exception:
+#             pass
+#
+#     list_id = data.get("list_id")
+#     list_title = data.get("list_title")
+#     notification_type = data.get("notification_type")
+#     repeat_type = data.get("repeat_type")
+#     week_days = data.get("week_days")
+#     chosen_dates = data.get("chosen_dates")  # новые даты из календаря
+#
+#     # Удаляем сообщение бота с просьбой ввести время
+#     try:
+#         await message.delete()
+#         time_prompt_id = data.get("time_prompt_message_id")
+#         if time_prompt_id:
+#             await message.bot.delete_message(
+#                 chat_id=message.chat.id,
+#                 message_id=time_prompt_id
+#             )
+#     except TelegramForbiddenError:
+#         pass
+#
+#     # -------------------- Если есть конкретные даты --------------------
+#     if chosen_dates:
+#         run_dates_list = []
+#         for date_str in chosen_dates:
+#             # Преобразуем дату
+#             year, month, day = map(int, date_str.split("-"))
+#             run_date = datetime(
+#                 year=year,
+#                 month=month,
+#                 day=day,
+#                 hour=remind_time.hour,
+#                 minute=remind_time.minute
+#             )
+#             run_dates_list.append(run_date)
+#
+#             await update_reminder_uc.execute(
+#                 user_id=message.from_user.id,
+#                 list_id=list_id,
+#                 remind_time=remind_time,
+#                 repeat_type=RepeatType.ONCE,
+#                 run_dates=run_dates_list,
+#                 notification_type=notification_type,
+#             )
+#
+#         user = service.get_user_by_id(message.from_user.id)
+#         await message.answer(
+#             f"✅ Напоминания для списка *{list_title}* установлены на выбранные даты:\n"
+#             + ", ".join(chosen_dates),
+#             parse_mode="Markdown",
+#             reply_markup=get_lists_keyboard(user.listoftasks)
+#         )
+#         await state.clear()
+#         return
+#
+#     # -------------------- Для обычных повторяющихся уведомлений --------------------
+#     # ✅ Используем use case напрямую
+#     try:
+#         task_list = await update_reminder_uc.execute(
+#             user_id=message.from_user.id,
+#             list_id=list_id,
+#             remind_time=remind_time,
+#             repeat_type=repeat_type,
+#             notification_type=notification_type,
+#             week_days=week_days
+#         )
+#     except ValueError as e:
+#         await message.answer(f"❌ Ошибка: {e}")
+#         await state.clear()
+#         return
+#
+#     # Формируем текст подтверждения
+#     repeat_text = {
+#         RepeatType.DAILY: "ежедневно",
+#         RepeatType.WEEKDAYS: "по будням",
+#         RepeatType.WEEKENDS: "по выходным",
+#         RepeatType.ONCE: "определенные даты",
+#         RepeatType.CUSTOM: "выбранные дни недели"
+#     }.get(repeat_type, "")
+#
+#     notification_text = "📊 Опрос" if notification_type == "poll" else "⏰ Напоминание"
+#
+#     user = service.get_user_by_id(message.from_user.id)
+#
+#     await message.answer(
+#         f"✅ {notification_text} для списка *{list_title}* установлено!\n"
+#         f"🕐 Время: {remind_time.strftime('%H:%M')}\n"
+#         f"🔁 Периодичность: {repeat_text}",
+#         parse_mode="Markdown",
+#         reply_markup=get_lists_keyboard(user.listoftasks)
+#     )
+#
+#     await state.clear()
+
+# @router.message(ListStates.waiting_for_run_date)
+# async def process_run_date(
+#     message: Message,
+#     state: FSMContext,
+#     service: UserService,
+#     update_reminder_uc: UpdateListReminderSettingsUseCase
+# ):
+#     """
+#         Обрабатывает ввод даты для одноразового уведомления/опроса
+#     """
+#
+#     try:
+#         selected_date = datetime.strptime(message.text, "%d.%m.%Y").date()
+#     except ValueError:
+#         await message.answer("❌ Неверный формат даты. Используйте ДД.ММ.ГГГГ")
+#         return
+#
+#     data = await state.get_data()
+#
+#     prompt_id = data.get("date_prompt_message_id")
+#
+#     remind_time = data.get("remind_time")
+#     list_id = data.get("list_id")
+#     list_title = data.get("list_title")
+#     notification_type = data.get("notification_type")
+#
+#     # объединяем дату и время
+#     run_date = datetime.combine(selected_date, remind_time)
+#
+#     # удаляем сообщение бота с просьбой ввести дату
+#     if prompt_id:
+#         try:
+#             await message.bot.delete_message(
+#                 chat_id=message.chat.id,
+#                 message_id=prompt_id
+#             )
+#         except Exception:
+#             pass
+#
+#     try:
+#         await update_reminder_uc.execute(
+#             user_id=message.from_user.id,
+#             list_id=list_id,
+#             remind_time=remind_time,
+#             repeat_type=RepeatType.ONCE,
+#             notification_type=notification_type,
+#             run_date=run_date  # 👈 передаём
+#         )
+#     except ValueError as e:
+#         await message.answer(f"❌ Ошибка: {e}")
+#         await state.clear()
+#         return
+#
+#
+#     user = service.get_user_by_id(message.from_user.id)
+#
+#     await message.answer(
+#         f"✅ Напоминание для списка *{list_title}* установлено!\n"
+#         f"📅 Дата: {selected_date.strftime('%d.%m.%Y')}\n"
+#         f"🕐 Время: {remind_time.strftime('%H:%M')}",
+#         parse_mode="Markdown",
+#         reply_markup=get_lists_keyboard(user.listoftasks)
+#     )
+#
+#     try:
+#         await message.delete()
+#     except TelegramForbiddenError:
+#         pass
+#
+#     await state.clear()
 
 @router.callback_query(F.data == "list:cancel")
 async def cancel_action(callback: CallbackQuery, state: FSMContext, service: UserService):

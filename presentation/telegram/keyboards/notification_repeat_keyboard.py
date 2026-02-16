@@ -41,7 +41,7 @@ def get_repeat_type_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(
-                text="📅 Будни (Пн-Пт)",
+                text="💼 Будни (Пн-Пт)",
                 callback_data="repeat:weekdays"
             )
         ],
@@ -53,13 +53,13 @@ def get_repeat_type_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(
-                text="🗓 Определённые дни недели",
+                text="📅 Определённые дни недели",
                 callback_data="repeat:custom"
             )
         ],
         [
             InlineKeyboardButton(
-                text="1️⃣ Один раз",
+                text="📌 Определенные даты\n(один или несколько раз)",
                 callback_data="repeat:once"
             )
         ],

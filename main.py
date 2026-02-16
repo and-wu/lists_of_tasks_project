@@ -25,6 +25,7 @@ from presentation.telegram.handlers.task_handlers import router as task_callback
 from presentation.telegram.handlers.poll_handlers import router as poll_callbacks_router
 from presentation.telegram.handlers.google_sheet_handlers import router as google_sheet_router
 from presentation.telegram.handlers.weekdays_handlers import router as weekdays_router
+from presentation.telegram.handlers.calendar_handler import router as calendar_router
 
 TOKEN = "YOUR_BOT_TOKEN"
 
@@ -80,6 +81,7 @@ async def start():
     dp.include_router(poll_callbacks_router)
     dp.include_router(google_sheet_router)
     dp.include_router(weekdays_router)
+    dp.include_router(calendar_router)
 
     try:
         # Удаляем возможный вебхук и сбрасываем накопившиеся апдейты

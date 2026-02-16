@@ -27,7 +27,7 @@ class UpdateListReminderSettingsUseCase:
         *,
         remind_time: Optional[time] = None,
         repeat_type: Optional[RepeatType] = None,
-        run_date: Optional[datetime] = None,
+        run_dates: Optional[list[datetime]] = None,
         notification_type: NotificationType | None = None,
         week_days: list[int] | None = None
     ) -> ListOfTasks:
@@ -44,8 +44,8 @@ class UpdateListReminderSettingsUseCase:
         if repeat_type is not None:
             task_list.repeat_type = repeat_type
 
-        if run_date is not None:
-            task_list.run_date = run_date
+        if run_dates is not None:
+            task_list.run_dates = sorted(run_dates)
 
         if notification_type is not None:
             task_list.notification_type = notification_type

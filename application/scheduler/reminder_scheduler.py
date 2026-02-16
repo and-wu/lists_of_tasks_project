@@ -152,6 +152,9 @@ class ReminderScheduler:
     def upsert_list_jobs(self, task_list: ListOfTasks):
         """Создаёт или обновляет job (reminder или poll) в зависимости от notification_type"""
 
+        # 🔥 Сначала удаляем ВСЕ старые job
+        self.remove_list_jobs(task_list.owner_id, task_list.id)
+
         if not task_list.is_valid_reminder() or not task_list.notification_type:
             self.remove_list_jobs(task_list.owner_id, task_list.id)
             return
@@ -165,8 +168,37 @@ class ReminderScheduler:
     # Reminder
     # -------------------------
     def _schedule_reminder(self, task_list: ListOfTasks):
+        # ------------------ ONCE (несколько дат) ------------------
+        if task_list.repeat_type == RepeatType.ONCE:
+
+            if not task_list.run_dates:
+                return
+
+            for run_date in task_list.run_dates:
+                job_id = f"reminder:{task_list.owner_id}:{task_list.id}:{int(run_date.timestamp())}"
+
+                self.scheduler.add_job(
+                    send_list_reminder,
+                    trigger=DateTrigger(run_date=run_date),
+                    kwargs={
+                        "bot": self.bot,
+                        "service": self.service,
+                        "user_id": task_list.owner_id,
+                        "list_id": task_list.id,
+                    },
+                    id=job_id
+                )
+
+            return
+
+        # ------------------ Повторяющиеся ------------------
         job_id = f"reminder:{task_list.owner_id}:{task_list.id}"
-        trigger = self._build_trigger(task_list)
+
+        trigger = CronTrigger(
+            hour=task_list.remind_time.hour,
+            minute=task_list.remind_time.minute,
+            day_of_week=task_list.get_day_of_week_expression(),
+        )
 
         self.scheduler.add_job(
             send_list_reminder,
@@ -177,19 +209,44 @@ class ReminderScheduler:
                 "user_id": task_list.owner_id,
                 "list_id": task_list.id,
             },
-            id=job_id,
-            replace_existing=True
+            id=job_id
         )
 
     # -------------------------
     # Poll
     # -------------------------
     def _schedule_poll(self, task_list: ListOfTasks):
-        job_id = f"poll:{task_list.owner_id}:{task_list.id}"
-        trigger = self._build_trigger(task_list)
+        # ------------------ ONCE (несколько дат) ------------------
+        if task_list.repeat_type == RepeatType.ONCE:
 
-        async def job():
-            await self.poll_service.send_daily_poll(task_list.owner_id, task_list.id)
+            if not task_list.run_dates:
+                return
+
+            for run_date in task_list.run_dates:
+                job_id = f"poll:{task_list.owner_id}:{task_list.id}:{int(run_date.timestamp())}"
+
+                async def job(user_id=task_list.owner_id, list_id=task_list.id):
+                    await self.poll_service.send_daily_poll(user_id, list_id)
+
+                self.scheduler.add_job(
+                    job,
+                    trigger=DateTrigger(run_date=run_date),
+                    id=job_id
+                )
+
+            return
+
+        # ------------------ Повторяющиеся ------------------
+        job_id = f"poll:{task_list.owner_id}:{task_list.id}"
+
+        trigger = CronTrigger(
+            hour=task_list.remind_time.hour,
+            minute=task_list.remind_time.minute,
+            day_of_week=task_list.get_day_of_week_expression(),
+        )
+
+        async def job(user_id=task_list.owner_id, list_id=task_list.id):
+            await self.poll_service.send_daily_poll(user_id, list_id)
 
         self.scheduler.add_job(
             job,
@@ -202,11 +259,9 @@ class ReminderScheduler:
     # Trigger builder
     # -------------------------
     def _build_trigger(self, task_list: ListOfTasks):
-
+        # ONCE больше не обрабатываем тут
         if task_list.repeat_type == RepeatType.ONCE:
-            if not task_list.run_date:
-                raise ValueError("run_date обязателен для ONCE")
-            return DateTrigger(run_date=task_list.run_date)
+            raise ValueError("_build_trigger не используется для ONCE с run_dates")
 
         day_of_week = task_list.get_day_of_week_expression()
 
@@ -220,12 +275,18 @@ class ReminderScheduler:
     # Remove job
     # -------------------------
     def remove_list_jobs(self, user_id: int, list_id: int):
-        for prefix in ["reminder", "poll"]:
-            job_id = f"{prefix}:{user_id}:{list_id}"
-            try:
-                self.scheduler.remove_job(job_id)
-            except Exception:
-                logging.debug(f"Job {job_id} not found")
+        prefixes = [
+            f"reminder:{user_id}:{list_id}",
+            f"poll:{user_id}:{list_id}",
+        ]
+
+        for job in self.scheduler.get_jobs():
+            for prefix in prefixes:
+                if job.id.startswith(prefix):
+                    try:
+                        self.scheduler.remove_job(job.id)
+                    except Exception:
+                        logging.debug(f"Job {job.id} not found")
 
     # -------------------------
     # Daily reset

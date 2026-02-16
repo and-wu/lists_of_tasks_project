@@ -18,7 +18,7 @@ class ListOfTasks:
     # 🔕 напоминание может отсутствовать
     remind_time: time | None = None # ⏰ время показа
     repeat_type: RepeatType | None = None
-    run_date: datetime | None = None
+    run_dates: list[datetime] | None = None
     notification_type: NotificationType | None = None
     week_days: list[int] | None = None
 
@@ -70,7 +70,7 @@ class ListOfTasks:
             return False
 
         if self.repeat_type == RepeatType.ONCE:
-            return self.run_date is not None
+            return self.run_dates is not None
 
         if self.repeat_type == RepeatType.CUSTOM:
             return bool(self.week_days)
@@ -102,11 +102,7 @@ class ListOfTasks:
                 "owner_id": self.owner_id,
                 "remind_time": self.remind_time.strftime("%H:%M") if self.remind_time else None,
                 "repeat_type": self.repeat_type.value if self.repeat_type else None,
-                "run_date": (
-                    self.run_date.isoformat()
-                    if self.run_date
-                    else None
-                ),
+                "run_dates": [dt.isoformat() for dt in self.run_dates] if self.run_dates else None,
                 "notification_type": self.notification_type.value if self.notification_type else None,
                 "week_days": self.week_days,
                 "tasks": [task.to_dict() for task in self.tasks],
@@ -120,7 +116,7 @@ class ListOfTasks:
                   tasks,
                   remind_time: str | None = None,
                   repeat_type: str | None = None,
-                  run_date: str | None = None,
+                  run_dates: list[str] | None = None,
                   notification_type: str | None = None,
                   week_days: list[int] | None = None,
                   active_poll_id: str | None = None ,
@@ -140,9 +136,9 @@ class ListOfTasks:
             else None
         )
 
-        parsed_run_date = (
-            datetime.fromisoformat(run_date)
-            if run_date
+        parsed_run_dates: list[datetime] | None = (
+            [datetime.fromisoformat(dt_str) for dt_str in run_dates]
+            if run_dates
             else None
         )
 
@@ -165,7 +161,7 @@ class ListOfTasks:
             tasks=tasks_obj,
             remind_time=parsed_remind_time,
             repeat_type=parsed_repeat_type,
-            run_date=parsed_run_date,
+            run_dates=parsed_run_dates,
             notification_type=parser_notification_type,
             week_days=parsed_week_days,
             active_poll_id=active_poll_id

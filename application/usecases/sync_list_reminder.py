@@ -67,6 +67,6 @@ class SyncListReminderWithSchedulerUseCase:
     def _is_expired_once(task_list: ListOfTasks) -> bool:
         return (
             task_list.repeat_type == RepeatType.ONCE
-            and task_list.run_date is not None
-            and task_list.run_date < datetime.now()
+            and task_list.run_dates is not None
+            and all(run_date < datetime.now() for run_date in task_list.run_dates)
         )
