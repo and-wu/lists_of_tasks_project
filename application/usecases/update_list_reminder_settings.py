@@ -41,14 +41,40 @@ class UpdateListReminderSettingsUseCase:
         if remind_time is not None:
             task_list.remind_time = remind_time
 
+            # 🔥 ВАЖНО: если ONCE — пересобираем run_dates
+            if task_list.repeat_type == RepeatType.ONCE and task_list.run_dates:
+                new_run_dates = []
+
+                for dt in task_list.run_dates:
+                    new_dt = dt.replace(
+                        hour=remind_time.hour,
+                        minute=remind_time.minute
+                    )
+                    new_run_dates.append(new_dt)
+
+                task_list.run_dates = sorted(new_run_dates)
+
         if repeat_type is not None:
             task_list.repeat_type = repeat_type
 
         if run_dates is not None:
             task_list.run_dates = sorted(run_dates)
 
+        # Смена типа уведомления
         if notification_type is not None:
+            old_type = task_list.notification_type
             task_list.notification_type = notification_type
+
+            # 🔥 Если меняем POLL → REMINDER
+            if old_type == NotificationType.POLL and notification_type == NotificationType.REMINDER:
+                if task_list.active_poll_id:
+                    try:
+                        await self.scheduler.poll_service.close_poll(task_list)
+                    except Exception:
+                        pass  # чтобы не падал use case
+
+                task_list.active_poll_id = None
+                task_list.poll_voted = False
 
         if week_days is not None:
             task_list.week_days = week_days

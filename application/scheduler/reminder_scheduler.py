@@ -292,7 +292,7 @@ class ReminderScheduler:
     # Daily reset
     # -------------------------
 
-    def schedule_daily_reset(self, hour: int = 16, minute: int = 35):
+    def schedule_daily_reset(self, hour: int = 16, minute: int = 15):
         self.scheduler.add_job(
             send_daily_reset,
             trigger="cron",

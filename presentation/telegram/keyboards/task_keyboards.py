@@ -64,6 +64,14 @@ def get_extra_task_buttons(list_id) -> list[list[InlineKeyboardButton]]:
                 text="⏰ Редактировать время напоминания",
                 callback_data=f"list:remind_menu:{list_id}"
             )],
+        [InlineKeyboardButton(
+                text="🗓 Изменить периодичность",
+                callback_data=f"edit_repeat:{list_id}"
+            )],
+        [InlineKeyboardButton(
+                text="🔄 Сменить тип уведомления",
+                callback_data=f"toggle_notification:{list_id}"
+            )],
         [InlineKeyboardButton(text="⬅️ Назад к спискам", callback_data="lists:show")]
     ]
 

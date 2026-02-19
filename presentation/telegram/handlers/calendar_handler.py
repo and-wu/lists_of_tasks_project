@@ -6,6 +6,9 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 
+from application.user.create_user import UserService
+from domain.enums.notification_type import NotificationType
+from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard
 from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.keyboards.calendar_keyboard import get_calendar_keyboard
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
@@ -77,8 +80,16 @@ async def change_calendar_month(callback: CallbackQuery, state: FSMContext):
 
 
 # Подтверждение выбранных дат
-@router.callback_query(ListStates.waiting_for_custom_dates, F.data == "confirm_dates")
-async def confirm_custom_dates(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(
+    ListStates.waiting_for_custom_dates,
+    F.data == "confirm_dates"
+)
+async def confirm_custom_dates(
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
+    update_reminder_uc: UpdateListReminderSettingsUseCase,
+):
     data = await state.get_data()
     selected_dates = sorted(data.get("selected_dates", []))
 
@@ -86,16 +97,89 @@ async def confirm_custom_dates(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Выберите хотя бы одну дату!", show_alert=True)
         return
 
+    list_id = data.get("list_id")
+    user_id = callback.from_user.id
+
+    task_list = service.get_list_by_id(user_id, list_id)
+
+    # -----------------------------
+    # Преобразуем даты в datetime
+    # -----------------------------
+    run_dates = [
+        datetime.fromisoformat(date_str)
+        for date_str in selected_dates
+    ]
+
+    # -----------------------------
+    # Если время УЖЕ установлено
+    # -----------------------------
+    if task_list.remind_time is not None:
+
+        # объединяем дату + уже существующее время
+        run_dates_with_time = [
+            dt.replace(
+                hour=task_list.remind_time.hour,
+                minute=task_list.remind_time.minute
+            )
+            for dt in run_dates
+        ]
+
+        updated_list = await update_reminder_uc.execute(
+            user_id=user_id,
+            list_id=list_id,
+            remind_time=task_list.remind_time,
+            repeat_type=RepeatType.ONCE,
+            run_dates=run_dates_with_time,
+            notification_type=task_list.notification_type,
+            week_days=None,
+        )
+
+        dates_text = ", ".join(
+            dt.strftime("%d.%m.%Y")
+            for dt in run_dates_with_time
+        )
+
+        time_text = updated_list.remind_time.strftime("%H:%M")
+
+        notification_icon = (
+            "⏰ Напоминание"
+            if updated_list.notification_type == NotificationType.REMINDER
+            else "📊 Опрос"
+        )
+
+        text = (
+            f"📋 *{updated_list.title}*\n\n"
+            f"🔔 Тип: {notification_icon}\n"
+            f"📆 Даты: {dates_text}\n"
+            f"⏰ Время: {time_text}\n\n"
+            f"✅ Даты обновлены!"
+        )
+
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=get_tasks_keyboard(tasks=task_list.tasks,
+                                            list_id=list_id,
+                                            tasks_list=task_list),
+            parse_mode="Markdown"
+        )
+
+        await state.clear()
+        await callback.answer()
+        return
+
+    # -----------------------------
+    # Если времени НЕТ — просим ввести
+    # -----------------------------
     await state.update_data(chosen_dates=selected_dates)
 
     sent_message = await callback.message.edit_text(
-        f"Выбраны даты: {', '.join(selected_dates)}\n⏰ Теперь введите время в формате HH:MM\n"
-            f"       Например: 20:00",
+        f"Выбраны даты: {', '.join(selected_dates)}\n"
+        f"⏰ Теперь введите время в формате HH:MM\n"
+        f"Например: 20:00",
         reply_markup=get_cancel_keyboard("list")
     )
 
-    # Сохраняем ID сообщения для последующего удаления
     await state.update_data(time_prompt_message_id=sent_message.message_id)
-
     await state.set_state(ListStates.waiting_for_remind_time)
+
     await callback.answer("Даты сохранены ✅")

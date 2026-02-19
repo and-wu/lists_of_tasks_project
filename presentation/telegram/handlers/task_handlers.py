@@ -10,7 +10,9 @@ from aiogram.types import CallbackQuery, Message
 from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.usecases.update_list_reminder_settings import UpdateListReminderSettingsUseCase
 from application.user.create_user import UserService
+from domain.enums.notification_type import NotificationType
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
+from presentation.telegram.keyboards.notification_repeat_keyboard import get_repeat_type_keyboard
 from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView
@@ -569,3 +571,82 @@ async def cancel_remind_edit(
     )
     await callback.answer("↩️ Отменено")
 
+@router.callback_query(F.data.startswith("toggle_notification:"))
+async def toggle_notification_type(
+    callback: CallbackQuery,
+    service: UserService,
+    update_reminder_uc: UpdateListReminderSettingsUseCase,
+):
+    """
+    Переключение типа уведомления (REMINDER ↔ POLL)
+    """
+    list_id = int(callback.data.split(":")[1])
+    user_id = callback.from_user.id
+
+    task_list = service.get_list_by_id(user_id, list_id)
+
+    if not task_list:
+        await callback.answer("Список не найден", show_alert=True)
+        return
+
+    # 🔄 переключаем тип
+    if task_list.notification_type == NotificationType.REMINDER:
+        new_type = NotificationType.POLL
+        text_type = "📊 Опрос"
+    else:
+        new_type = NotificationType.REMINDER
+        text_type = "⏰ Напоминание"
+
+    # обновляем через use case
+    await update_reminder_uc.execute(
+        user_id=user_id,
+        list_id=list_id,
+        remind_time=task_list.remind_time,
+        repeat_type=task_list.repeat_type,
+        run_dates=task_list.run_dates,
+        notification_type=new_type,
+        week_days=task_list.week_days,
+    )
+
+    await callback.answer("Тип уведомления обновлён")
+
+
+    text = f"✅ Тип уведомления изменён на {text_type}!\n" + task_view.get_list_title(task_list.title)
+    await callback.message.edit_text(text=text,
+                                     reply_markup=get_tasks_keyboard(tasks=task_list.tasks,
+                                                                     list_id=list_id,
+                                                                     tasks_list=task_list)
+                                     )
+
+@router.callback_query(F.data.startswith("edit_repeat:"))
+async def open_repeat_menu(
+    callback: CallbackQuery,
+    state: FSMContext,
+    service: UserService,
+):
+    """
+    Изменение периодичности (RepeatType)
+    """
+    list_id = int(callback.data.split(":")[1])
+    user_id = callback.from_user.id
+
+    task_list = service.get_list_by_id(user_id, list_id)
+
+    if not task_list:
+        await callback.answer("Список не найден", show_alert=True)
+        return
+
+    # сохраняем list_id в FSM
+    await state.update_data(
+        list_id=list_id,
+        list_title=task_list.title,
+        notification_type=task_list.notification_type,
+    )
+
+    await callback.message.edit_text(
+        "Выберите новую периодичность:",
+        reply_markup=get_repeat_type_keyboard()  # твоя уже существующая клавиатура
+    )
+
+    await state.set_state(ListStates.waiting_for_repeat_type)
+    await callback.answer()

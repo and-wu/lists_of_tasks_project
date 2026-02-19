@@ -60,7 +60,7 @@ class TaskView:
         return f"✅ Задача создана: id = {task.id} — {task.value}"
 
     def get_list_title(self, list_title: str) -> str:
-        return f"{list_title}"
+        return f"Список - {list_title}"
 
     def task_text(self, task: Task) -> str:
         return f"📌 Задача:\n\n{task.value}"

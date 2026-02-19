@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable
 
 from application.scheduler.reminder_scheduler import ReminderScheduler

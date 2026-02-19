@@ -106,7 +106,8 @@ class ListOfTasks:
                 "notification_type": self.notification_type.value if self.notification_type else None,
                 "week_days": self.week_days,
                 "tasks": [task.to_dict() for task in self.tasks],
-                "active_poll_id": self.active_poll_id}
+                "active_poll_id": self.active_poll_id,
+                "poll_voted": self.poll_voted}
 
     @classmethod
     def from_dict(cls,
@@ -120,6 +121,7 @@ class ListOfTasks:
                   notification_type: str | None = None,
                   week_days: list[int] | None = None,
                   active_poll_id: str | None = None ,
+                  poll_voted: bool = False,
                   **kwargs) -> "ListOfTasks":
 
         tasks_obj = [Task.from_dict(**t) for t in tasks]
@@ -164,5 +166,6 @@ class ListOfTasks:
             run_dates=parsed_run_dates,
             notification_type=parser_notification_type,
             week_days=parsed_week_days,
-            active_poll_id=active_poll_id
+            active_poll_id=active_poll_id,
+            poll_voted=poll_voted
         )
