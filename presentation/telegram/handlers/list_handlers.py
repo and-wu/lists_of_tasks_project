@@ -112,6 +112,23 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
                              )
         return
 
+    # Получаем данные FSM
+    data = await state.get_data()
+
+    # Удаляем старое сообщение об ошибке (если было)
+    error_message_id = data.get("error_message_id")
+    if error_message_id:
+        try:
+            await message.bot.delete_message(
+                chat_id=message.chat.id,
+                message_id=error_message_id
+            )
+        except TelegramBadRequest:
+            pass
+
+        # очищаем id
+        await state.update_data(error_message_id=None)
+
     use_case = CreateNewListUseCase(user_service=service)
 
     try:
@@ -120,11 +137,20 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
             list_title=list_title,
         )
     except ListAlreadyExistsError:
-        await message.answer(
+        # 🧹 удаляем сообщение пользователя с дублирующим названием
+        try:
+            await message.delete()
+        except TelegramBadRequest:
+            pass
+
+        error_message = await message.answer(
             text="❌ Список с таким названием уже существует.\n"
                  "Введите другое название:",
             reply_markup=get_cancel_keyboard('list')
         )
+
+        # сохраняем id сообщения об ошибке
+        await state.update_data(error_message_id=error_message.message_id)
         return
 
     data = await state.get_data()
@@ -169,7 +195,7 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
     ListStates.waiting_for_notification_type,
     F.data.startswith("notification:")
 )
-async def process_notification_type(callback: CallbackQuery, state: FSMContext):
+async def process_notification_type(callback: CallbackQuery, service: UserService, state: FSMContext):
     """
     Обрабатывает выбор типа уведомлений.
     """
@@ -177,12 +203,14 @@ async def process_notification_type(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
     list_title = data.get("list_title", "")
+    user = service.get_user_by_id(callback.from_user.id)
 
     if raw_notification_type == "none":
         # Без уведомлений - завершаем создание списка
         await callback.message.edit_text(
             f"✅ Список *{list_title}* создан без уведомлений!",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
+            reply_markup=get_lists_keyboard(user.listoftasks)
         )
         await state.clear()
         await callback.answer()
