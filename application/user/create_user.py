@@ -1,10 +1,10 @@
 from datetime import time
 
+from domain.errors import ListAlreadyExistsError
 from domain.task_list import ListOfTasks
 from domain.tasks import Task
 from domain.users import User
 from domain.interfaces.user_repository import IUserRepository
-
 
 class UserService:
     def __init__(self, repo: IUserRepository):
@@ -40,13 +40,27 @@ class UserService:
 
     def add_list_of_tasks(self, user_id: int, title, remind_time: None | time) -> ListOfTasks:
         user = self.repo.get_by_id(user_id)
+
+        normalized_title = title.strip().lower()
+
+        # ✅ Проверка на дубликат
+        for list_tasks in user.listoftasks:
+            if list_tasks.title.strip().lower() == normalized_title:
+                raise ListAlreadyExistsError()
+
+        # генерация id
         max_id = 0
         for list_tasks in user.listoftasks:
             max_id = max(list_tasks.id, max_id) + 1
 
-        list_of_tasks = ListOfTasks(id=max_id, title=title, owner_id=user_id, remind_time=remind_time)
-        user.listoftasks.append(list_of_tasks)
+        list_of_tasks = ListOfTasks(
+            id=max_id,
+            title=title,
+            owner_id=user_id,
+            remind_time=remind_time
+        )
 
+        user.listoftasks.append(list_of_tasks)
         self.repo.save(user)
 
         return list_of_tasks

@@ -4,16 +4,18 @@ from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from application.usecases.lists import CreateNewListUseCase
 from application.usecases.update_list_reminder_settings import UpdateListReminderSettingsUseCase
 from application.user.create_user import UserService
 from domain.enums.notification_type import NotificationType
 from domain.enums.repeat_type import RepeatType
+from domain.errors import ListAlreadyExistsError
 from presentation.telegram.keyboards.calendar_keyboard import get_calendar_keyboard
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
 from presentation.telegram.keyboards.notification_repeat_keyboard import get_notification_type_keyboard, \
-    get_repeat_type_keyboard
+    get_repeat_type_keyboard, get_back_to_notification_type_button
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard
 from presentation.telegram.keyboards.weekdays_keyboard import get_weekdays_keyboard
 from presentation.telegram.states.list_states import ListStates
@@ -111,10 +113,19 @@ async def process_list_name(message: Message, state: FSMContext, service: UserSe
         return
 
     use_case = CreateNewListUseCase(user_service=service)
-    new_list_tasks = await use_case.execute(
-        user_id=message.from_user.id,
-        list_title=list_title,
-    )
+
+    try:
+        new_list_tasks = await use_case.execute(
+            user_id=message.from_user.id,
+            list_title=list_title,
+        )
+    except ListAlreadyExistsError:
+        await message.answer(
+            text="❌ Список с таким названием уже существует.\n"
+                 "Введите другое название:",
+            reply_markup=get_cancel_keyboard('list')
+        )
+        return
 
     data = await state.get_data()
 
@@ -193,9 +204,18 @@ async def process_notification_type(callback: CallbackQuery, state: FSMContext):
     else:  # poll
         text = "📊 Выберите периодичность опросов:"
 
+    builder = InlineKeyboardBuilder()
+
+    # добавляем кнопки периодичности
+    for row in get_repeat_type_keyboard().inline_keyboard:
+        builder.row(*row)
+
+    # добавляем кнопку отмены
+    builder.row(get_back_to_notification_type_button())
+
     await callback.message.edit_text(
         text=text,
-        reply_markup=get_repeat_type_keyboard()
+        reply_markup=builder.as_markup()
     )
 
     await state.set_state(ListStates.waiting_for_repeat_type)

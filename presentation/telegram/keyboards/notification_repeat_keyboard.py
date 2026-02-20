@@ -1,6 +1,7 @@
 # keyboards.py (или где у вас клавиатуры)
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 def get_notification_type_keyboard() -> InlineKeyboardMarkup:
     """
     Клавиатура для выбора типа уведомлений при создании списка.
@@ -62,12 +63,36 @@ def get_repeat_type_keyboard() -> InlineKeyboardMarkup:
                 text="📌 Определенные даты\n(один или несколько раз)",
                 callback_data="repeat:once"
             )
-        ],
-        [
-            InlineKeyboardButton(
-                text="◀️ Назад",
-                callback_data="back:notification_type"
-            )
         ]
     ])
     return keyboard
+
+def get_confirm_toggle_notification_keyboard(list_id: int) -> InlineKeyboardMarkup:
+    """
+    Клавиатура подтверждения смены типа уведомления
+    """
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Да, сменить",
+                    callback_data=f"confirm_toggle_notification:{list_id}"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="❌ Отмена",
+                    callback_data=f"list:remind_cancel:{list_id}"
+                )
+            ]
+        ]
+    )
+
+def get_back_to_notification_type_button() -> InlineKeyboardButton:
+    """
+    Кнопка возврата к выбору типа уведомления
+    """
+    return InlineKeyboardButton(
+        text="◀️ Назад",
+        callback_data="back:notification_type"
+    )

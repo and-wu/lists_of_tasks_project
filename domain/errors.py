@@ -17,4 +17,5 @@ class InvalidMenuChoiceError(DomainError):
         self.message = message
         super().__init__(message)
 
-
+class ListAlreadyExistsError(Exception):
+    pass

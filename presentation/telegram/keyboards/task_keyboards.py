@@ -4,6 +4,16 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from domain.tasks import Task
 
+
+def get_back_to_list_button(list_id: int, action: str) -> InlineKeyboardButton:
+    """
+    Кнопка отмены действия и возврата к списку
+    """
+    return InlineKeyboardButton(
+        text="⬅️ Отменить и вернуться к списку",
+        callback_data=f"list:{action}:{list_id}"
+    )
+
 def remind_manage_keyboard_with_time(list_id: int, remind_time: time) -> InlineKeyboardMarkup:
     """
     Если время УЖЕ есть

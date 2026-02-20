@@ -6,19 +6,21 @@ from aiogram import Router, F
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from application.scheduler.reminder_scheduler import ReminderScheduler
 from application.usecases.update_list_reminder_settings import UpdateListReminderSettingsUseCase
 from application.user.create_user import UserService
 from domain.enums.notification_type import NotificationType
 from presentation.telegram.keyboards.extra_keyboard import get_cancel_keyboard
-from presentation.telegram.keyboards.notification_repeat_keyboard import get_repeat_type_keyboard
+from presentation.telegram.keyboards.notification_repeat_keyboard import get_repeat_type_keyboard, \
+    get_confirm_toggle_notification_keyboard
 from presentation.telegram.states.list_states import ListStates
 from presentation.telegram.states.task_states import TaskStates
 from presentation.telegram.texts import TaskView
 from presentation.telegram.keyboards.task_keyboards import get_tasks_keyboard, extra_task_menu, \
     get_task_detail_keyboard, get_confirm_delete_task_keyboard, remind_manage_keyboard_with_time, \
-    remind_manage_keyboard_without_time
+    remind_manage_keyboard_without_time, get_back_to_list_button
 from presentation.telegram.utils.fsm_cleanup import delete_fsm_prompt_message
 
 router = Router()
@@ -572,13 +574,12 @@ async def cancel_remind_edit(
     await callback.answer("↩️ Отменено")
 
 @router.callback_query(F.data.startswith("toggle_notification:"))
-async def toggle_notification_type(
+async def ask_toggle_notification_type(
     callback: CallbackQuery,
     service: UserService,
-    update_reminder_uc: UpdateListReminderSettingsUseCase,
 ):
     """
-    Переключение типа уведомления (REMINDER ↔ POLL)
+    показывает текущее состояние и просит подтверждение
     """
     list_id = int(callback.data.split(":")[1])
     user_id = callback.from_user.id
@@ -589,7 +590,41 @@ async def toggle_notification_type(
         await callback.answer("Список не найден", show_alert=True)
         return
 
-    # 🔄 переключаем тип
+    # Определяем текущий и следующий тип
+    if task_list.notification_type == NotificationType.REMINDER:
+        current_type = "⏰ Напоминание"
+        next_type = "📊 Опрос"
+    else:
+        current_type = "📊 Опрос"
+        next_type = "⏰ Напоминание"
+
+    text = (
+        f"ℹ️ Сейчас установлен тип уведомления:\n"
+        f"<b>{current_type}</b>\n\n"
+        f"Хотите изменить его на:\n"
+        f"<b>{next_type}</b>?"
+    )
+
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=get_confirm_toggle_notification_keyboard(list_id)
+    )
+
+@router.callback_query(F.data.startswith("confirm_toggle_notification:"))
+async def confirm_toggle_notification_type(
+    callback: CallbackQuery,
+    service: UserService,
+    update_reminder_uc: UpdateListReminderSettingsUseCase,
+):
+    list_id = int(callback.data.split(":")[1])
+    user_id = callback.from_user.id
+
+    task_list = service.get_list_by_id(user_id, list_id)
+
+    if not task_list:
+        await callback.answer("Список не найден", show_alert=True)
+        return
+
     if task_list.notification_type == NotificationType.REMINDER:
         new_type = NotificationType.POLL
         text_type = "📊 Опрос"
@@ -597,7 +632,6 @@ async def toggle_notification_type(
         new_type = NotificationType.REMINDER
         text_type = "⏰ Напоминание"
 
-    # обновляем через use case
     await update_reminder_uc.execute(
         user_id=user_id,
         list_id=list_id,
@@ -610,13 +644,85 @@ async def toggle_notification_type(
 
     await callback.answer("Тип уведомления обновлён")
 
+    text = (
+        f"✅ Тип уведомления изменён на {text_type}!\n\n"
+        + task_view.get_list_title(task_list.title)
+    )
 
-    text = f"✅ Тип уведомления изменён на {text_type}!\n" + task_view.get_list_title(task_list.title)
-    await callback.message.edit_text(text=text,
-                                     reply_markup=get_tasks_keyboard(tasks=task_list.tasks,
-                                                                     list_id=list_id,
-                                                                     tasks_list=task_list)
-                                     )
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=get_tasks_keyboard(
+            tasks=task_list.tasks,
+            list_id=list_id,
+            tasks_list=task_list
+        )
+    )
+
+@router.callback_query(F.data.startswith("cancel_toggle_notification:"))
+async def cancel_toggle_notification(callback: CallbackQuery, service: UserService):
+    list_id = int(callback.data.split(":")[1])
+    user_id = callback.from_user.id
+
+    task_list = service.get_list_by_id(user_id, list_id)
+    text = task_view.get_list_title(task_list.title)
+
+    await callback.answer("Изменение отменено")
+
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=get_tasks_keyboard(
+            tasks=task_list.tasks,
+            list_id=list_id,
+            tasks_list=task_list
+        )
+    )
+
+# @router.callback_query(F.data.startswith("toggle_notification:"))
+# async def toggle_notification_type(
+#     callback: CallbackQuery,
+#     service: UserService,
+#     update_reminder_uc: UpdateListReminderSettingsUseCase,
+# ):
+#     """
+#     Переключение типа уведомления (REMINDER ↔ POLL)
+#     """
+#     list_id = int(callback.data.split(":")[1])
+#     user_id = callback.from_user.id
+#
+#     task_list = service.get_list_by_id(user_id, list_id)
+#
+#     if not task_list:
+#         await callback.answer("Список не найден", show_alert=True)
+#         return
+#
+#     # 🔄 переключаем тип
+#     if task_list.notification_type == NotificationType.REMINDER:
+#         new_type = NotificationType.POLL
+#         text_type = "📊 Опрос"
+#     else:
+#         new_type = NotificationType.REMINDER
+#         text_type = "⏰ Напоминание"
+#
+#     # обновляем через use case
+#     await update_reminder_uc.execute(
+#         user_id=user_id,
+#         list_id=list_id,
+#         remind_time=task_list.remind_time,
+#         repeat_type=task_list.repeat_type,
+#         run_dates=task_list.run_dates,
+#         notification_type=new_type,
+#         week_days=task_list.week_days,
+#     )
+#
+#     await callback.answer("Тип уведомления обновлён")
+#
+#
+#     text = f"✅ Тип уведомления изменён на {text_type}!\n" + task_view.get_list_title(task_list.title)
+#     await callback.message.edit_text(text=text,
+#                                      reply_markup=get_tasks_keyboard(tasks=task_list.tasks,
+#                                                                      list_id=list_id,
+#                                                                      tasks_list=task_list)
+#                                      )
 
 @router.callback_query(F.data.startswith("edit_repeat:"))
 async def open_repeat_menu(
@@ -643,9 +749,18 @@ async def open_repeat_menu(
         notification_type=task_list.notification_type,
     )
 
+    builder = InlineKeyboardBuilder()
+
+    # добавляем кнопки периодичности
+    for row in get_repeat_type_keyboard().inline_keyboard:
+        builder.row(*row)
+
+    # добавляем кнопку отмены
+    builder.row(get_back_to_list_button(list_id, "remind_cancel"))
+
     await callback.message.edit_text(
         "Выберите новую периодичность:",
-        reply_markup=get_repeat_type_keyboard()  # твоя уже существующая клавиатура
+        reply_markup=builder.as_markup()
     )
 
     await state.set_state(ListStates.waiting_for_repeat_type)

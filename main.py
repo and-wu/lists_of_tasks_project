@@ -59,8 +59,11 @@ async def start():
     )
 
     # Создаём use cases
-    update_reminder_uc = UpdateListReminderSettingsUseCase(user_service=service, scheduler=reminder_scheduler)
-    sync_use_case = SyncListReminderWithSchedulerUseCase(user_service=service,scheduler=reminder_scheduler)
+    update_reminder_uc = UpdateListReminderSettingsUseCase(user_service=service,
+                                                           scheduler=reminder_scheduler,
+                                                           poll_service=poll_service)
+    sync_use_case = SyncListReminderWithSchedulerUseCase(user_service=service,
+                                                         scheduler=reminder_scheduler)
 
     sync_use_case.execute()
 
