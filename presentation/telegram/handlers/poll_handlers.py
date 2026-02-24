@@ -5,39 +5,32 @@ from application.poll.daily_poll_service import DailyPollService
 
 router = Router()
 
-
 @router.poll_answer()
 async def handle_poll_answer(poll_answer: PollAnswer, poll_service: DailyPollService):
     poll_id = poll_answer.poll_id
     selected_options = poll_answer.option_ids
 
-    poll_data = poll_service.poll_map.get(poll_id)
-    if not poll_data:
+    # получаем пользователя
+    user = poll_service.user_service.get_user_by_id(poll_answer.user.id)
+    if not user:
         return
 
-    user_id = poll_data["user_id"]
-    task_ids = poll_data["task_ids"]
-    list_id = poll_data["list_id"]
-
-    user = poll_service.user_service.get_user_by_id(user_id)
-
-    # 🔎 находим список
+    # находим список с активным poll
     task_list = next(
-        l for l in user.listoftasks
-        if l.id == list_id and l.active_poll_id == poll_id
+        (l for l in user.listoftasks if l.active_poll_id == poll_id),
+        None
     )
+    if not task_list:
+        return
 
-    # 🧠 Проставляем completed по индексам
-    for idx, task_id in enumerate(task_ids):
-        task = next(
-            t
-            for l in user.listoftasks
-            for t in l.tasks
-            if t.id == task_id
-        )
-        task.completed = idx in selected_options
+    # ставим completed для задач по выбранным индексам
+    for idx, task_id in enumerate(task_list.active_poll_task_ids):
+        task = next((t for t in task_list.tasks if t.id == task_id), None)
+        if task:
+            task.completed = idx in selected_options
 
-    # ✅ ФИКСИРУЕМ ФАКТ ГОЛОСОВАНИЯ
+    # фиксируем факт голосования
     task_list.poll_voted = True
 
-    poll_service.user_service.save_user(user_id)
+    # сохраняем изменения
+    poll_service.user_service.save_user(user.id)

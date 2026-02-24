@@ -60,6 +60,8 @@ async def send_daily_reset(
     bot: Bot,
     service: UserService,
 ):
+    logging.info("DAILY RESET TRIGGERED")
+
     data = service.reset_all_tasks()
 
     for user_id, rows in data.items():
@@ -292,7 +294,7 @@ class ReminderScheduler:
     # Daily reset
     # -------------------------
 
-    def schedule_daily_reset(self, hour: int = 16, minute: int = 15):
+    def schedule_daily_reset(self, hour: int = 3, minute: int = 00):
         self.scheduler.add_job(
             send_daily_reset,
             trigger="cron",
