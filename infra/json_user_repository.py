@@ -126,8 +126,8 @@ class JsonUserRepository(IUserRepository):
 
             for task_list in user.listoftasks:
 
-                # 🔹 Сбрасываем только списки с poll
-                if not task_list.active_poll_id:
+                # ✅ Сбрасываем только если poll есть и пользователь проголосовал
+                if not (task_list.active_poll_id and task_list.poll_voted):
                     continue
 
                 for task in task_list.tasks:
