@@ -84,7 +84,3 @@ async def cmd_start(message: Message, state: FSMContext, service: UserService):
 
     return
 
-
-    # сохраняем prompt
-    #await state.update_data(prompt_message_id=sent.message_id)
-

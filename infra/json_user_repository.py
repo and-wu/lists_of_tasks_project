@@ -118,7 +118,6 @@ class JsonUserRepository(IUserRepository):
         Сбрасывает и возвращает данные только по спискам,
         у которых был активный poll.
         """
-        print("one")
         result: dict[int, list[dict]] = {}
 
         for user_id, user in self._data.items():
@@ -150,6 +149,5 @@ class JsonUserRepository(IUserRepository):
             if user_rows:
                 result[user_id] = user_rows
 
-        print("two")
         self._save()
         return result

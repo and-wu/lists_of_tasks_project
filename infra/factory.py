@@ -21,8 +21,13 @@ def create_repository(db_type: str, path: Path) -> IUserRepository:
         DatabaseInitializer.initialize_sqlite(path)
         return SqliteUserRepository(path)
     elif db_type == DBType.JSON:
-        path = path.with_suffix(".json")
+        # Если путь уже заканчивается на .json, не добавляем лишнее
+        if path.suffix != ".json":
+            path = path.with_suffix(".json")
+
+        # Создаём файл, если его нет
         DatabaseInitializer.initialize_json(path)
+
         return JsonUserRepository(path)
     else:
         raise ValueError(f"Unknown db_type: {db_type}")
