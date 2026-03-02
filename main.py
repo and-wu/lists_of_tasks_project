@@ -39,9 +39,14 @@ async def start():
               default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
 
+    # repo = create_repository(
+    #     db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
+    #     path=Path("storage/users"))
+
     repo = create_repository(
         db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
-        path=Path("storage/users"))
+        path=Path("/app/data/db.json"))
+
 
     # сервисы
     service = UserService(repo=repo)
