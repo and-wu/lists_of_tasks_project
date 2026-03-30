@@ -18,7 +18,7 @@ from application.usecases.update_list_reminder_settings import UpdateListReminde
 from application.user.create_user import UserService
 from infra.factory import create_repository, DBType
 
-from config_data.config import BOT_TOKEN
+from config_data.config import BOT_TOKEN, PROXY
 from presentation.telegram.handlers.commands import commands_router
 from presentation.telegram.handlers.list_handlers import router as list_callbacks_router
 from presentation.telegram.handlers.task_handlers import router as task_callbacks_router
@@ -26,16 +26,21 @@ from presentation.telegram.handlers.poll_handlers import router as poll_callback
 from presentation.telegram.handlers.google_sheet_handlers import router as google_sheet_router
 from presentation.telegram.handlers.weekdays_handlers import router as weekdays_router
 from presentation.telegram.handlers.calendar_handler import router as calendar_router
+from aiogram.client.session.aiohttp import AiohttpSession
 
-TOKEN = "YOUR_BOT_TOKEN"
 
 async def start():
+    session = AiohttpSession(
+        proxy=PROXY
+    )
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     )
 
     bot = Bot(token=BOT_TOKEN,
+              session=session,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
 
