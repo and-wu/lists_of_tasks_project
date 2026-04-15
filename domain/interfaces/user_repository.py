@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from domain.users import User
+from domain.SQLite_models.users import User
 
 
 # =============================================

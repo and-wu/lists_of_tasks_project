@@ -1,9 +1,11 @@
 from pathlib import Path
 
+from db_SQLite.init_db import init_db
+from db_SQLite.db import SessionLocal
 from domain.interfaces.user_repository import IUserRepository
 from infra.database_initializer import DatabaseInitializer
 from infra.json_user_repository import JsonUserRepository
-from infra.sqlite_user_repository import SqliteUserRepository
+from infra.sqlalchemy_user_repository import SQLAlchemyUserRepository
 
 
 # =============================================
@@ -18,8 +20,11 @@ class DBType:
 def create_repository(db_type: str, path: Path) -> IUserRepository:
     if db_type == DBType.SQLITE:
         path = path.with_suffix(".db")
-        DatabaseInitializer.initialize_sqlite(path)
-        return SqliteUserRepository(path)
+
+        init_db()  # ✅ СОЗДАНИЕ ТАБЛИЦ (ВАЖНО: ДО РЕПОЗИТОРИЕВ)
+
+        return SQLAlchemyUserRepository(SessionLocal)
+
     elif db_type == DBType.JSON:
         # Если путь уже заканчивается на .json, не добавляем лишнее
         if path.suffix != ".json":

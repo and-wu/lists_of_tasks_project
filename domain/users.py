@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-
 from domain.task_list import ListOfTasks
 
 
@@ -29,18 +28,6 @@ class User:
                 "google_sheet_url": self.google_sheet_url,
                 "listoftasks": [ls.to_dict() for ls in self.listoftasks]
                 }
-
-
-    # @classmethod
-    # def from_dict(cls, id, name, username, google_sheet_url=None, listoftasks=None, **kwargs) -> "User":
-    #     #listoftasks = listoftasks or []
-    #     listoftasks_obj = [ListOfTasks.from_dict(**l) for l in listoftasks]
-    #     return cls(id=id,
-    #                name=name,
-    #                username=username,
-    #                google_sheet_url=google_sheet_url,
-    #                listoftasks=listoftasks_obj
-    #                )
 
     @classmethod
     def from_dict(cls, **data) -> "User":

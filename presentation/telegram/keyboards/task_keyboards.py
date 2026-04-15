@@ -94,8 +94,8 @@ def get_tasks_keyboard(tasks, list_id, tasks_list=None) -> InlineKeyboardMarkup:
     for task in tasks:
         keyboard.append([
             InlineKeyboardButton(
-                text=f"✅ {task.value}" if task.completed else f"⬜️ {task.value}",
-                callback_data=f"task:select:{task.id}"
+                text=f"✅ {task["value"]}" if task["completed"] else f"⬜️ {task["value"]}",
+                callback_data=f"task:select:{task["id"]}"
             )
         ])
 

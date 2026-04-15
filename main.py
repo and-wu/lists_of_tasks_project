@@ -30,6 +30,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 
 
 async def start():
+
     session = AiohttpSession(
         proxy=PROXY
     )
@@ -46,11 +47,11 @@ async def start():
 
     # repo = create_repository(
     #     db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
-    #     path=Path("storage/users"))
+    #     path=Path(""/app/data/db.json""))
 
     repo = create_repository(
-        db_type=DBType.JSON,  # DBType.JSON или DBType.SQLITE
-        path=Path("/app/data/db.json"))
+        db_type=DBType.SQLITE,  # DBType.JSON или DBType.SQLITE
+        path=Path("/app.db"))
 
 
     # сервисы
