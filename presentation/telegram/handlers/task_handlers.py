@@ -40,12 +40,12 @@ async def show_tasks(callback: CallbackQuery, service: UserService):
 
     if not tasks:
         # если задач нет, просто отправляем сообщение
-        await callback.message.edit_text(text=task_view.no_tasks_in_list(task_list["title"]),
+        await callback.message.edit_text(text=task_view.no_tasks_in_list(task_list.title),
                                          reply_markup=extra_task_menu(list_id=list_id))
         await callback.answer()
         return
 
-    text = task_view.get_list_title(task_list["title"])
+    text = task_view.get_list_title(task_list.title)
     await callback.message.edit_text(text=text,
                                      reply_markup=get_tasks_keyboard(tasks=tasks,
                                                                      list_id=list_id,

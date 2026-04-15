@@ -2,7 +2,7 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db_SQLite.db import Base
-from domain.task_list import ListOfTasks
+from domain.SQLite_models.tasks_list import ListOfTasks
 
 
 class User(Base):
@@ -19,7 +19,8 @@ class User(Base):
     # связь с ListOfTasks (TaskList)
     listoftasks: Mapped[list["ListOfTasks"]] = relationship(
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="selectin"
     )
 
     def rename(self, new_name: str):

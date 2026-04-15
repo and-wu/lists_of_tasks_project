@@ -73,7 +73,7 @@ class UserService:
         ]
         return max(all_tasks, default=-1) + 1
 
-    def add_task(self, user_id: int, list_id: int, value) -> dict:
+    def add_task(self, user_id: int, list_id: int, value) -> Task:
         user = self.repo.get_by_id(user_id)
         target_list = None
         for list_of_tasks in user.listoftasks:
@@ -89,24 +89,14 @@ class UserService:
 
         self.repo.save(user)
 
-        # 🔥 ВАЖНО: возвращаем данные, а не ORM
-        return {"id": task.id, "value": task.value, "completed": task.completed}
+        return task
 
     def get_tasks(self, user_id, list_of_tasks_id):
         user =  self.repo.get_by_id(user_id)
 
         for listoftasks in user.listoftasks:
             if listoftasks.id == list_of_tasks_id:
-                return [
-                    {
-                        "id": task.id,
-                        "value": task.value,
-                        "completed": task.completed
-                    }
-                    for task in listoftasks.tasks
-                ]
-
-        return []
+                return listoftasks.tasks
 
 
     def show_lists_of_tasks(self, user_id: int) -> list:
@@ -116,18 +106,12 @@ class UserService:
             user_lists.append((listoftasks.id, listoftasks.title))
         return user_lists
 
-    def get_list_by_id(self, user_id: int, list_id: int) -> dict | None:
+    def get_list_by_id(self, user_id: int, list_id: int) -> ListOfTasks | None:
         user = self.repo.get_by_id(user_id)
 
         for listoftasks in user.listoftasks:
             if listoftasks.id == list_id:
-                return {
-                    "id": listoftasks.id,
-                    "title": listoftasks.title,
-                    "remind_time": listoftasks.remind_time
-                }
-
-        return None
+                return listoftasks
 
     def get_task_with_list(self, user_id: int, task_id: int) -> tuple[Task, int] | None:
         user = self.repo.get_by_id(user_id)

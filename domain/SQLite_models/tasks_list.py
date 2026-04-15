@@ -41,7 +41,8 @@ class ListOfTasks(Base):
     # -------------------------
     tasks: Mapped[list["Task"]] = relationship(
         back_populates="task_list",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        lazy="selectin"
     )
 
     # -------------------------

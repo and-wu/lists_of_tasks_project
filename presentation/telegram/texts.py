@@ -57,7 +57,7 @@ class TaskView:
         return f"В списке '{list_title}' нет задач."
 
     def task_created(self, task: dict) -> str:
-        return f"✅ Задача создана: id = {task["id"]} — {task["value"]}"
+        return f"✅ Задача создана: id = {task.id} — {task.value}"
 
     def get_list_title(self, list_title: str) -> str:
         return f"Список - {list_title}"
