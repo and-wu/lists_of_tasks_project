@@ -620,16 +620,8 @@ async def delete_list_confirm(callback: CallbackQuery, service: UserService):
     await show_lists_view(callback=callback, service=service, prefix_text=text)
     await callback.answer(text=list_view.list_deleted_success)
 
-#1 Дублируется логика с обработчиком снизу, проверить.  # noqa: RUF003
 @router.callback_query(F.data.startswith("list:delete_no:"))
 async def delete_list_cancel(callback: CallbackQuery, service: UserService):
-    """Обработчик отмены удаления списка."""
-    await show_lists_view(callback=callback, service=service)
-    await callback.answer(text=list_view.delete_action_canceled)
-
-
-@router.callback_query(F.data == "list:delete_cancel")
-async def cancel_delete_start(callback: CallbackQuery, service: UserService):
     """Обработчик отмены удаления списка."""
     await show_lists_view(callback=callback, service=service)
     await callback.answer(text=list_view.delete_action_canceled)

@@ -123,10 +123,12 @@ class UserService:
 
         return None
 
-    def update_task_text(self, user_id: int, task_id: int, new_value: str) -> Task:
-        task, _ = self.get_task_with_list(user_id, task_id)
-        task.value = new_value
-        self.repo.save(self.repo.get_by_id(user_id))
+    def update_task_text(self, user_id: int, task_id: int, new_value: str):
+        task = self.repo.update_task_text(user_id, task_id, new_value)
+
+        if not task:
+            raise ValueError("Task not found")
+
         return task
 
     def delete_list_of_tasks(self, user_id: int, list_id: int) -> bool:

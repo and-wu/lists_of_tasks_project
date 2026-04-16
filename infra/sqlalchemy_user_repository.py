@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -131,6 +133,38 @@ class SQLAlchemyUserRepository(IUserRepository):
 
             return False
 
+    # =========================
+    # изменение текста задачи
+    # =========================
+
+    def update_task_text(self, user_id: int, task_id: int, new_value: str) -> bool | dict[str, str | Any]:
+        with self.session_factory() as session:
+            user = (
+                session.query(User)
+                .options(
+                    selectinload(User.listoftasks)
+                    .selectinload(ListOfTasks.tasks)
+                )
+                .filter(User.id == user_id)
+                .first()
+            )
+
+            if not user:
+                return False
+
+            for task_list in user.listoftasks:
+                for task in task_list.tasks:
+                    if task.id == task_id:
+                        task.value = new_value
+                        session.commit()
+
+                        return {
+                            "id": task.id,
+                            "value": task.value,
+                            "completed": task.completed
+                        }
+
+            return False
 
     # =========================
     # RESET ALL TASKS (simple)
